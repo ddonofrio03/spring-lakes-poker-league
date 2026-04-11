@@ -81,18 +81,23 @@ async function loadRankings() {
         events: 0,
         wins: 0,
         totalPoints: 0,
-        tocBonusChips: 0,
+        tocBonusChips: 0, // calculated below as totalPoints*100 + wins*2000
         eventPoints: {} // event_number -> points
       };
     }
     const p = playerMap[name];
     p.events++;
     p.totalPoints += r.points;
-    p.tocBonusChips += r.toc_bonus_chips || 0;
+    // toc chips calculated after full aggregation
     if (r.is_winner) p.wins++;
     if (r.events) {
       p.eventPoints[r.events.event_number] = r.points;
     }
+  });
+
+  // Calculate TOC bonus chips: totalPoints * 100 + wins * 2000
+  Object.values(playerMap).forEach(p => {
+    p.tocBonusChips = (p.totalPoints * 100) + (p.wins * 2000);
   });
 
   // Sort: by total points desc
@@ -156,9 +161,7 @@ async function loadRankings() {
       }
     }
 
-    const tocDisplay = p.tocBonusChips > 0
-      ? `${(p.tocBonusChips).toLocaleString()}`
-      : '0';
+    const tocDisplay = p.tocBonusChips.toLocaleString();
 
     html += `
       <tr class="${rankClass}">
