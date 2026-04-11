@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin – Spring Lakes Poker League</title>
+<link rel="stylesheet" href="../style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="points.js"></script>
+</head>
+<body>
+
+<!-- ─── LOGIN VIEW ─── -->
+<div id="login-view">
+  <div class="login-wrap">
+    <div class="login-card">
+      <h2>SLPL ADMIN</h2>
+      <p>Spring Lakes Poker League</p>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="admin-pw" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn btn-primary btn-full" onclick="doLogin()">Sign In</button>
+      <p class="error-msg" id="login-error" style="display:none">Incorrect password.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ─── ADMIN PANEL ─── -->
+<div id="admin-view" style="display:none">
+
+  <div class="admin-header">
+    <span class="admin-title">SLPL ADMIN</span>
+    <nav class="admin-nav">
+      <a href="#" onclick="showTab('tab-event')">Enter Results</a>
+      <a href="#" onclick="showTab('tab-roster')">Roster</a>
+      <a href="#" onclick="showTab('tab-history')">Event History</a>
+      <a href="../index.html" target="_blank">View Site ↗</a>
+      <a href="#" onclick="doLogout()" style="color:#e85d26">Logout</a>
+    </nav>
+  </div>
+
+  <div class="admin-body">
+
+    <div id="status-banner" class="status-banner"></div>
+
+    <!-- ═══ TAB: ENTER RESULTS ═══ -->
+    <div id="tab-event" class="admin-tab">
+
+      <div class="admin-card">
+        <h2>ENTER EVENT RESULTS</h2>
+
+        <div class="form-row cols-3">
+          <div class="form-group">
+            <label>Event Number</label>
+            <select id="ev-number" onchange="updateEventName()">
+              <option value="">-- Select --</option>
+              <option value="1">Event 1</option>
+              <option value="2">Event 2</option>
+              <option value="3">Event 3</option>
+              <option value="4">Event 4</option>
+              <option value="5">Event 5</option>
+              <option value="6">Event 6</option>
+              <option value="7">Event 7</option>
+              <option value="8">Event 8</option>
+              <option value="9">Event 9</option>
+              <option value="10">Event 10</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Event Name</label>
+            <input type="text" id="ev-name" placeholder="e.g. S19E5 NLHE">
+          </div>
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="ev-date">
+          </div>
+        </div>
+
+        <div class="form-row cols-3">
+          <div class="form-group">
+            <label>Game Type</label>
+            <select id="ev-game">
+              <option value="NLHE">NLHE</option>
+              <option value="PLO">PLO</option>
+              <option value="Mixed">Mixed</option>
+              <option value="TOC">TOC</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Location</label>
+            <input type="text" id="ev-location" value="Dave's Poker Room">
+          </div>
+          <div class="form-group">
+            <label>Total Players</label>
+            <input type="number" id="ev-players" min="2" max="30" placeholder="e.g. 12"
+                   onchange="updatePlayerCount()" oninput="updatePlayerCount()">
+          </div>
+        </div>
+
+      </div>
+
+      <!-- CSV Import -->
+      <div class="admin-card">
+        <h2>IMPORT FROM BLINDVALET CSV</h2>
+        <p style="font-size:0.9rem;color:#666;margin-bottom:1rem">
+          In BlindValet, open your tournament → Players tab → click <strong>Save to CSV</strong>.
+          Paste the file contents below. The app will auto-fill finish positions.
+        </p>
+        <div class="form-group csv-area">
+          <label>Paste CSV Contents</label>
+          <textarea id="csv-input" placeholder="Place,Name,Stack,KOs&#10;1,Greg C,240,1&#10;2,Chip G,150,0&#10;..."></textarea>
+          <p class="csv-hint">Expected columns: Place, Name (other columns ignored)</p>
+        </div>
+        <button class="btn btn-dark" onclick="parseCSV()">Parse CSV &rarr; Fill Results</button>
+      </div>
+
+      <!-- Finish Order Entry -->
+      <div class="admin-card" id="finish-entry-card" style="display:none">
+        <h2>FINISH ORDER &amp; POINT PREVIEW</h2>
+        <p style="font-size:0.85rem;color:#888;margin-bottom:1rem">
+          Points are calculated automatically. Set total players above first.
+          The winner (1st place) gets 2&times; base points + 2,000 TOC bonus chips.
+        </p>
+
+        <div style="overflow-x:auto">
+          <table class="finish-entry-table" id="finish-table">
+            <thead>
+              <tr>
+                <th>Finish</th>
+                <th>Player</th>
+                <th>Points</th>
+                <th>In Money</th>
+                <th>Payout $</th>
+              </tr>
+            </thead>
+            <tbody id="finish-body"></tbody>
+          </table>
+        </div>
+
+        <div style="margin-top:1rem;display:flex;gap:0.75rem;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="saveEvent()" id="save-btn">Save Event Results</button>
+          <button class="btn btn-outline" onclick="clearFinishForm()">Clear</button>
+        </div>
+      </div>
+
+    </div><!-- end tab-event -->
+
+    <!-- ═══ TAB: ROSTER ═══ -->
+    <div id="tab-roster" class="admin-tab" style="display:none">
+
+      <div class="admin-card">
+        <h2>PLAYER ROSTER</h2>
+        <div id="roster-list">
+          <div class="loading-msg">Loading players...</div>
+        </div>
+        <div class="form-row cols-2" style="margin-top:1.2rem">
+          <div class="form-group">
+            <label>Add New Player</label>
+            <input type="text" id="new-player-name" placeholder="First name Last initial (e.g. John W)">
+          </div>
+          <div style="display:flex;align-items:flex-end;padding-bottom:1rem">
+            <button class="btn btn-primary" onclick="addPlayer()">Add Player</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end tab-roster -->
+
+    <!-- ═══ TAB: HISTORY ═══ -->
+    <div id="tab-history" class="admin-tab" style="display:none">
+
+      <div class="admin-card">
+        <h2>EVENT HISTORY</h2>
+        <div id="history-list">
+          <div class="loading-msg">Loading events...</div>
+        </div>
+      </div>
+
+    </div><!-- end tab-history -->
+
+  </div><!-- admin-body -->
+</div><!-- admin-view -->
+
+<script>
+// ─── Auth ───
+function doLogin() {
+  const pw = document.getElementById('admin-pw').value;
+  if (pw === ADMIN_PASSWORD) {
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('admin-view').style.display = 'block';
+    init();
+  } else {
+    document.getElementById('login-error').style.display = 'block';
+  }
+}
+
+function doLogout() {
+  document.getElementById('admin-view').style.display = 'none';
+  document.getElementById('login-view').style.display = 'block';
+  document.getElementById('admin-pw').value = '';
+}
+
+// ─── Tab switching ───
+function showTab(id) {
+  document.querySelectorAll('.admin-tab').forEach(t => t.style.display = 'none');
+  document.getElementById(id).style.display = 'block';
+  if (id === 'tab-roster') loadRoster();
+  if (id === 'tab-history') loadHistory();
+}
+
+// ─── Supabase ───
+let sb;
+function getDB() {
+  if (!sb) sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  return sb;
+}
+
+// ─── Status banner ───
+function showStatus(msg, type = 'success') {
+  const el = document.getElementById('status-banner');
+  el.textContent = msg;
+  el.className = `status-banner show ${type}`;
+  setTimeout(() => { el.className = 'status-banner'; }, 5000);
+}
+
+// ─── Init ───
+let allPlayers = [];
+
+async function init() {
+  const db = getDB();
+  const { data } = await db.from('players').select('*').eq('active', true).order('name');
+  allPlayers = data || [];
+  // Pre-set today's date
+  document.getElementById('ev-date').value = new Date().toISOString().slice(0,10);
+}
+
+function updateEventName() {
+  const n = document.getElementById('ev-number').value;
+  const game = document.getElementById('ev-game').value;
+  if (n) {
+    document.getElementById('ev-name').value = `S19E${n} ${game}`;
+  }
+}
+
+// ─── Player count change → rebuild table ───
+function updatePlayerCount() {
+  const n = parseInt(document.getElementById('ev-players').value);
+  if (!n || n < 2) {
+    document.getElementById('finish-entry-card').style.display = 'none';
+    return;
+  }
+  document.getElementById('finish-entry-card').style.display = 'block';
+  buildFinishTable(n, []);
+}
+
+// ─── Build finish order table ───
+function buildFinishTable(totalPlayers, prefilled) {
+  // prefilled = [{position, name}]
+  const preview = previewAllPoints(totalPlayers);
+  const eventPot = totalPlayers * 60; // $60 per player to prize pool
+
+  const tbody = document.getElementById('finish-body');
+  tbody.innerHTML = '';
+
+  preview.forEach(row => {
+    const pre = prefilled.find(p => p.position === row.position);
+    const payout = row.payoutPct > 0 ? (eventPot * row.payoutPct).toFixed(0) : '';
+
+    // Build player dropdown
+    let options = '<option value="">-- Select Player --</option>';
+    allPlayers.forEach(p => {
+      const sel = pre && pre.name === p.name ? 'selected' : '';
+      options += `<option value="${p.id}" data-name="${p.name}" ${sel}>${p.name}</option>`;
+    });
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-weight:700;font-size:1.1rem">${row.position}</td>
+      <td>
+        <select class="player-select" data-pos="${row.position}" style="min-width:160px">
+          ${options}
+        </select>
+      </td>
+      <td>
+        <span class="pts-preview ${row.position === 1 ? 'winner' : ''}">${row.points}</span>
+      </td>
+      <td style="color:${row.inMoney ? '#e85d26' : '#aaa'}">${row.inMoney ? '✓ $' + (payout||'') : ''}</td>
+      <td style="color:#555">${payout ? '$' + payout : ''}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ─── CSV Parser ───
+function parseCSV() {
+  const raw = document.getElementById('csv-input').value.trim();
+  if (!raw) { showStatus('Paste CSV content first.', 'error'); return; }
+
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  // Find header row
+  const headerIdx = lines.findIndex(l => l.toLowerCase().includes('place') || l.toLowerCase().includes('name'));
+  const dataLines = headerIdx >= 0 ? lines.slice(headerIdx + 1) : lines;
+
+  const prefilled = [];
+  let maxPos = 0;
+
+  dataLines.forEach(line => {
+    const cols = line.split(',').map(c => c.trim().replace(/"/g, ''));
+    if (cols.length < 2) return;
+    const pos = parseInt(cols[0]);
+    const name = cols[1];
+    if (!isNaN(pos) && name) {
+      prefilled.push({ position: pos, name });
+      maxPos = Math.max(maxPos, pos);
+    }
+  });
+
+  if (prefilled.length === 0) {
+    showStatus('Could not parse CSV. Expected columns: Place, Name', 'error');
+    return;
+  }
+
+  // Set player count if not set
+  const playerInput = document.getElementById('ev-players');
+  if (!playerInput.value || parseInt(playerInput.value) < maxPos) {
+    playerInput.value = maxPos;
+  }
+
+  const total = parseInt(playerInput.value) || maxPos;
+  document.getElementById('finish-entry-card').style.display = 'block';
+  buildFinishTable(total, prefilled);
+  showStatus(`Parsed ${prefilled.length} players from CSV. Review and save below.`, 'info');
+}
+
+// ─── Save Event ───
+async function saveEvent() {
+  const db = getDB();
+  const eventNum = document.getElementById('ev-number').value;
+  const eventName = document.getElementById('ev-name').value.trim();
+  const eventDate = document.getElementById('ev-date').value;
+  const gameType = document.getElementById('ev-game').value;
+  const location = document.getElementById('ev-location').value.trim();
+  const totalPlayers = parseInt(document.getElementById('ev-players').value);
+
+  if (!eventNum || !eventName || !eventDate || !totalPlayers) {
+    showStatus('Please fill in all event details (number, name, date, players).', 'error');
+    return;
+  }
+
+  // Collect finish positions
+  const selects = document.querySelectorAll('.player-select');
+  const entries = [];
+  const usedPlayers = new Set();
+
+  selects.forEach(sel => {
+    const playerId = sel.value;
+    const pos = parseInt(sel.dataset.pos);
+    if (!playerId) return;
+    if (usedPlayers.has(playerId)) {
+      showStatus('A player is assigned to multiple positions. Please check the results.', 'error');
+      return;
+    }
+    usedPlayers.add(playerId);
+    entries.push({ playerId, position: pos });
+  });
+
+  if (entries.length < 2) {
+    showStatus('Please assign at least 2 players before saving.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  try {
+    // Upsert event
+    const { data: evData, error: evErr } = await db
+      .from('events')
+      .upsert({
+        season: SEASON,
+        event_number: parseInt(eventNum),
+        event_name: eventName,
+        game_type: gameType,
+        event_date: eventDate,
+        location,
+        player_count: totalPlayers
+      }, { onConflict: 'season,event_number', ignoreDuplicates: false })
+      .select()
+      .single();
+
+    if (evErr) throw evErr;
+
+    const eventId = evData.id;
+
+    // Delete existing results for this event (re-entry)
+    await db.from('results').delete().eq('event_id', eventId);
+
+    const eventPot = totalPlayers * 60;
+    const resultRows = entries.map(e => {
+      const calc = calcPoints(e.position, totalPlayers);
+      const payoutPct = calcPayoutPct(e.position, totalPlayers);
+      const tocBonus = e.position === 1 ? 2000 : 0;
+      return {
+        event_id: eventId,
+        player_id: e.playerId,
+        finish_position: e.position,
+        points: calc.points,
+        is_winner: e.position === 1,
+        toc_bonus_chips: tocBonus,
+        payout: payoutPct > 0 ? parseFloat((eventPot * payoutPct).toFixed(2)) : 0
+      };
+    });
+
+    const { error: resErr } = await db.from('results').insert(resultRows);
+    if (resErr) throw resErr;
+
+    showStatus(`Event "${eventName}" saved successfully with ${entries.length} players!`, 'success');
+    clearFinishForm();
+  } catch (err) {
+    console.error(err);
+    showStatus(`Error saving: ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Event Results';
+  }
+}
+
+function clearFinishForm() {
+  document.getElementById('ev-number').value = '';
+  document.getElementById('ev-name').value = '';
+  document.getElementById('ev-players').value = '';
+  document.getElementById('ev-game').value = 'NLHE';
+  document.getElementById('csv-input').value = '';
+  document.getElementById('finish-entry-card').style.display = 'none';
+  document.getElementById('ev-date').value = new Date().toISOString().slice(0,10);
+}
+
+// ─── Roster Management ───
+async function loadRoster() {
+  const db = getDB();
+  const { data } = await db.from('players').select('*').order('name');
+  const el = document.getElementById('roster-list');
+  if (!data || data.length === 0) {
+    el.innerHTML = '<p class="muted">No players found.</p>';
+    return;
+  }
+  let html = '<div class="player-roster">';
+  data.forEach(p => {
+    html += `
+      <div class="player-tag">
+        <span style="color:${p.active ? '#333' : '#aaa'}">${p.name}</span>
+        <button class="player-tag-remove" title="${p.active ? 'Deactivate' : 'Reactivate'}"
+                onclick="togglePlayer('${p.id}', ${p.active})">
+          ${p.active ? '&times;' : '+'}
+        </button>
+      </div>
+    `;
+  });
+  html += '</div>';
+  html += `<p style="font-size:0.8rem;color:#aaa;margin-top:0.5rem">× = deactivate (removes from event entry). + = reactivate.</p>`;
+  el.innerHTML = html;
+}
+
+async function addPlayer() {
+  const name = document.getElementById('new-player-name').value.trim();
+  if (!name) return;
+  const db = getDB();
+  const { error } = await db.from('players').insert({ name, active: true });
+  if (error) {
+    showStatus(`Error: ${error.message}`, 'error');
+  } else {
+    document.getElementById('new-player-name').value = '';
+    showStatus(`Player "${name}" added.`);
+    allPlayers = null; // force reload
+    await loadRoster();
+    await init(); // refresh allPlayers
+  }
+}
+
+async function togglePlayer(id, currentActive) {
+  const db = getDB();
+  const { error } = await db.from('players').update({ active: !currentActive }).eq('id', id);
+  if (error) {
+    showStatus(`Error: ${error.message}`, 'error');
+  } else {
+    await loadRoster();
+    await init();
+  }
+}
+
+// ─── History ───
+async function loadHistory() {
+  const db = getDB();
+  const { data: events } = await db
+    .from('events')
+    .select('*, results(finish_position, is_winner, points, players(name))')
+    .eq('season', SEASON)
+    .order('event_number');
+
+  const el = document.getElementById('history-list');
+  if (!events || events.length === 0) {
+    el.innerHTML = '<p class="muted">No events recorded yet.</p>';
+    return;
+  }
+
+  let html = '';
+  events.forEach(ev => {
+    const winner = ev.results.find(r => r.is_winner);
+    const sorted = ev.results.sort((a,b) => a.finish_position - b.finish_position);
+    const d = new Date(ev.event_date + 'T12:00:00');
+    html += `
+      <div style="margin-bottom:2rem">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.6rem">
+          <strong style="font-size:1.05rem">${ev.event_name}</strong>
+          <span style="font-size:0.85rem;color:#888">${d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} &middot; ${ev.player_count} players</span>
+        </div>
+        <table class="results-table" style="font-size:0.9rem">
+          <thead><tr><th>Finish</th><th>Player</th><th>Points</th><th>Payout</th></tr></thead>
+          <tbody>
+    `;
+    sorted.forEach(r => {
+      html += `<tr class="${r.finish_position <= 3 ? 'money' : ''}">
+        <td>${r.finish_position}</td>
+        <td>${r.players?.name || '—'}${r.is_winner ? ' 🏆' : ''}</td>
+        <td>${r.points}</td>
+        <td>${r.payout > 0 ? '$' + r.payout.toFixed(0) : ''}</td>
+      </tr>`;
+    });
+    html += `</tbody></table>
+        <div style="margin-top:0.4rem;text-align:right">
+          <button class="btn btn-outline btn-sm" onclick="deleteEvent('${ev.id}', '${ev.event_name}')">Delete Event</button>
+        </div>
+      </div>
+    `;
+  });
+
+  el.innerHTML = html;
+}
+
+async function deleteEvent(id, name) {
+  if (!confirm(`Delete "${name}" and all its results? This cannot be undone.`)) return;
+  const db = getDB();
+  const { error } = await db.from('events').delete().eq('id', id);
+  if (error) {
+    showStatus(`Error: ${error.message}`, 'error');
+  } else {
+    showStatus(`Event "${name}" deleted.`);
+    loadHistory();
+  }
+}
+</script>
+
+</body>
+</html>

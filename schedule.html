@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schedule – Spring Lakes Poker League</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="supabase.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="index.html" class="site-title">SPRING LAKES POKER LEAGUE</a>
+    <nav class="site-nav">
+      <a href="index.html" class="nav-link">HOME</a>
+      <a href="schedule.html" class="nav-link active">SCHEDULE</a>
+      <a href="rankings.html" class="nav-link">SEASON RANKINGS</a>
+      <a href="rules.html" class="nav-link">RULES &amp; STRUCTURE</a>
+    </nav>
+    <button class="nav-toggle" onclick="toggleNav()">&#9776;</button>
+  </div>
+</header>
+
+<div class="hero-banner">
+  <img src="https://springlakespoker.com/wp-content/uploads/2025/11/SLPL-S19-Header.jpg"
+       onerror="this.style.display='none';document.querySelector('.hero-fallback').style.display='flex'"
+       alt="Spring Lakes Poker League Season XIX" class="hero-img">
+  <div class="hero-fallback" style="display:none">
+    <div class="hero-fallback-text">
+      <span class="hero-roman">XIX</span>
+      <span class="hero-name">SPRING LAKES<br>POKER LEAGUE</span>
+    </div>
+  </div>
+</div>
+
+<div class="page-body full-width">
+  <main class="main-content">
+
+    <h1 class="page-heading">SEASON XIX SCHEDULE</h1>
+    <div class="page-heading-divider"></div>
+
+    <div id="schedule-wrap">
+      <div class="loading-msg">Loading schedule...</div>
+    </div>
+
+  </main>
+</div>
+
+<footer class="site-footer">
+  <p>Spring Lakes Poker League &copy; 2008&ndash;2026 &nbsp;|&nbsp; Season XIX</p>
+</footer>
+
+<script>
+async function loadSchedule() {
+  const db = getSupabase();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: sched } = await db
+    .from('schedule')
+    .select('*')
+    .eq('season', 19)
+    .order('event_date');
+
+  // Load finished events to show results
+  const { data: events } = await db
+    .from('events')
+    .select('event_number, player_count, results(finish_position, is_winner, points, players(name))')
+    .eq('season', 19);
+
+  const wrap = document.getElementById('schedule-wrap');
+
+  if (!sched || sched.length === 0) {
+    wrap.innerHTML = '<p class="muted">No schedule data found.</p>';
+    return;
+  }
+
+  let html = '<table class="results-table" style="max-width:700px">';
+  html += `
+    <thead>
+      <tr>
+        <th>Event</th>
+        <th>Date</th>
+        <th>Game</th>
+        <th>Location</th>
+        <th>Winner</th>
+        <th>Players</th>
+      </tr>
+    </thead>
+    <tbody>
+  `;
+
+  sched.forEach(s => {
+    const isPast = s.event_date < today;
+    const d = new Date(s.event_date + 'T12:00:00');
+    const dateStr = d.toLocaleString('en-US', {weekday:'short', month:'long', day:'numeric', year:'numeric'});
+    const label = s.is_toc ? 'TOC' : `Event ${s.event_number}`;
+
+    // Find matching event results
+    const ev = events && events.find(e => e.event_number === s.event_number);
+    let winner = '';
+    let playerCount = '';
+
+    if (ev) {
+      const winResult = ev.results.find(r => r.is_winner);
+      if (winResult) winner = winResult.players?.name || '';
+      playerCount = ev.player_count || ev.results.length;
+    }
+
+    html += `
+      <tr style="${!isPast ? 'font-weight:600' : 'color:#999'}">
+        <td>${label}${s.notes ? `<br><small style="color:#aaa;font-weight:400">${s.notes}</small>` : ''}</td>
+        <td>${dateStr}</td>
+        <td>${s.game_type}</td>
+        <td>${s.location}</td>
+        <td>${winner ? `<strong style="color:#e85d26">${winner}</strong>` : (isPast ? '' : '<span style="color:#ccc">TBD</span>')}</td>
+        <td style="text-align:center">${playerCount || ''}</td>
+      </tr>
+    `;
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', loadSchedule);
+</script>
+</body>
+</html>

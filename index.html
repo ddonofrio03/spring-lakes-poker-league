@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spring Lakes Poker League</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="supabase.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="index.html" class="site-title">SPRING LAKES POKER LEAGUE</a>
+    <nav class="site-nav">
+      <a href="index.html" class="nav-link active">HOME</a>
+      <a href="schedule.html" class="nav-link">SCHEDULE</a>
+      <a href="rankings.html" class="nav-link">SEASON RANKINGS</a>
+      <a href="rules.html" class="nav-link">RULES &amp; STRUCTURE</a>
+    </nav>
+    <button class="nav-toggle" onclick="toggleNav()">&#9776;</button>
+  </div>
+</header>
+
+<div class="hero-banner">
+  <img src="https://springlakespoker.com/wp-content/uploads/2025/11/SLPL-S19-Header.jpg"
+       onerror="this.style.display='none';document.querySelector('.hero-fallback').style.display='flex'"
+       alt="Spring Lakes Poker League Season XIX" class="hero-img">
+  <div class="hero-fallback" style="display:none">
+    <div class="hero-fallback-text">
+      <span class="hero-roman">XIX</span>
+      <span class="hero-name">SPRING LAKES<br>POKER LEAGUE</span>
+      <span class="hero-years">2008–2026</span>
+    </div>
+  </div>
+</div>
+
+<div class="page-body">
+  <main class="main-content">
+
+    <div class="home-latest">
+      <div id="latest-event-wrap">
+        <div class="loading-msg">Loading latest event...</div>
+      </div>
+    </div>
+
+  </main>
+
+  <aside class="sidebar">
+    <div class="sidebar-block">
+      <h3 class="sidebar-heading">NEXT EVENT</h3>
+      <div id="next-event-wrap">
+        <div class="loading-msg">Loading...</div>
+      </div>
+    </div>
+
+    <div class="sidebar-block">
+      <h3 class="sidebar-heading">SCHEDULE</h3>
+      <div id="schedule-wrap">
+        <div class="loading-msg">Loading...</div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  <p>Spring Lakes Poker League &copy; 2008&ndash;2026 &nbsp;|&nbsp;
+     Season XIX &nbsp;|&nbsp;
+     <a href="admin/index.html">Admin</a>
+  </p>
+</footer>
+
+<script>
+async function loadHome() {
+  const db = getSupabase();
+
+  // Load schedule for sidebar
+  const { data: sched } = await db
+    .from('schedule')
+    .select('*')
+    .eq('season', 19)
+    .order('event_date');
+
+  const today = new Date().toISOString().slice(0,10);
+
+  // Next event
+  const next = sched ? sched.find(s => s.event_date >= today) : null;
+  const nextWrap = document.getElementById('next-event-wrap');
+  if (next) {
+    const d = new Date(next.event_date + 'T12:00:00');
+    const month = d.toLocaleString('en-US', {month:'long'});
+    const day = d.getDate();
+    nextWrap.innerHTML = `
+      <p class="next-event-date">${month} ${day}</p>
+      <p class="next-event-type">${next.is_toc ? 'Tournament of Champions' : next.game_type}</p>
+      <p class="next-event-loc">${next.location}</p>
+    `;
+  } else {
+    nextWrap.innerHTML = '<p class="muted">Season complete</p>';
+  }
+
+  // Schedule list
+  const schedWrap = document.getElementById('schedule-wrap');
+  if (sched && sched.length) {
+    let html = '<ul class="sched-list">';
+    sched.forEach(s => {
+      const d = new Date(s.event_date + 'T12:00:00');
+      const label = s.is_toc ? 'TOC' : `E${s.event_number}`;
+      const past = s.event_date < today;
+      html += `<li class="sched-item ${past ? 'past' : ''}">
+        <span class="sched-label">${label}</span>
+        <span class="sched-info">
+          ${d.toLocaleString('en-US',{month:'short',day:'numeric'})} &mdash; ${s.game_type}
+        </span>
+      </li>`;
+    });
+    html += '</ul>';
+    schedWrap.innerHTML = html;
+  }
+
+  // Latest finished event
+  const { data: events } = await db
+    .from('events')
+    .select('*, results(*, players(name))')
+    .eq('season', 19)
+    .order('event_number', {ascending: false})
+    .limit(1);
+
+  const latestWrap = document.getElementById('latest-event-wrap');
+  if (events && events.length) {
+    const ev = events[0];
+    const results = ev.results.sort((a,b) => a.finish_position - b.finish_position);
+    const d = new Date(ev.event_date + 'T12:00:00');
+    let html = `
+      <h2 class="event-title">${ev.event_name}</h2>
+      <p class="event-meta">${d.toLocaleString('en-US',{month:'long',day:'numeric',year:'numeric'})}</p>
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Place</th>
+            <th>Player</th>
+            <th>Points</th>
+            <th>Payout</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    results.forEach(r => {
+      const medal = r.finish_position === 1 ? '🥇 ' : r.finish_position === 2 ? '🥈 ' : r.finish_position === 3 ? '🥉 ' : '';
+      html += `<tr class="${r.finish_position <= 3 ? 'money' : ''}">
+        <td>${r.finish_position}</td>
+        <td>${medal}${r.players.name}</td>
+        <td>${r.points}</td>
+        <td>${r.payout > 0 ? '$' + r.payout.toFixed(0) : ''}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    latestWrap.innerHTML = html;
+  } else {
+    latestWrap.innerHTML = '<p class="muted" style="padding:2rem 0">No events recorded yet this season.</p>';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadHome);
+</script>
+</body>
+</html>

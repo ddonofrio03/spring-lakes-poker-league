@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rules & Structure – Spring Lakes Poker League</title>
+<link rel="stylesheet" href="style.css">
+<script src="supabase.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="index.html" class="site-title">SPRING LAKES POKER LEAGUE</a>
+    <nav class="site-nav">
+      <a href="index.html" class="nav-link">HOME</a>
+      <a href="schedule.html" class="nav-link">SCHEDULE</a>
+      <a href="rankings.html" class="nav-link">SEASON RANKINGS</a>
+      <a href="rules.html" class="nav-link active">RULES &amp; STRUCTURE</a>
+    </nav>
+    <button class="nav-toggle" onclick="toggleNav()">&#9776;</button>
+  </div>
+</header>
+
+<div class="hero-banner">
+  <img src="https://springlakespoker.com/wp-content/uploads/2025/11/SLPL-S19-Header.jpg"
+       onerror="this.style.display='none';document.querySelector('.hero-fallback').style.display='flex'"
+       alt="Spring Lakes Poker League Season XIX" class="hero-img">
+  <div class="hero-fallback" style="display:none">
+    <div class="hero-fallback-text">
+      <span class="hero-roman">XIX</span>
+      <span class="hero-name">SPRING LAKES<br>POKER LEAGUE</span>
+    </div>
+  </div>
+</div>
+
+<div class="page-body full-width">
+  <main class="main-content">
+
+    <h1 class="page-heading">SEASON 19 RULES &amp; STRUCTURE</h1>
+    <div class="page-heading-divider"></div>
+
+    <div class="rules-content">
+
+      <div class="highlight-box">
+        <strong>New features are highlighted below.</strong> Rules are always subject to change. The Host is the ultimate arbiter of all disputes.
+      </div>
+
+      <h3>League Format</h3>
+      <p>League Play consists of ten (10) monthly games held on the 3rd Saturday of each month, with the Tournament of Champions (TOC) on the 3rd Saturday of November 2026.</p>
+      <p>Any player who participates in four (4) League events over Season 19, or wins any event, is invited to the TOC. If you haven't achieved 4 League Events, you add $20 per missed event to the TOC Kitty.</p>
+
+      <h3>Buy-In</h3>
+      <ul>
+        <li><strong>Regular Events:</strong> $80 — $60 towards the main prize pool, $20 towards the TOC Kitty</li>
+        <li><strong>TOC:</strong> $60 — all towards the TOC Kitty</li>
+        <li>Starting Stacks: 10,000 chips (all formats)</li>
+      </ul>
+
+      <h3>League Scoring System</h3>
+      <p>Every player receives a minimum of one (1) point, plus additional points for each position they finish.</p>
+      <div class="highlight-box">
+        <strong>Formula:</strong> In an N-player tournament, last place = 1 point, each place above = +1 point.<br>
+        All tournament winners receive a bonus of <strong>2&times;</strong> the base points for 1st place.<br>
+        Players in the money get half as many bonus points as the person ahead of them.<br>
+        <br>
+        <strong>Example (16 players):</strong><br>
+        16th = 1 pt &nbsp;|&nbsp; 15th = 2 pts &nbsp;|&nbsp; ... &nbsp;|&nbsp; 1st = 32 pts (16 base + 16 bonus)<br>
+        2nd = 23 pts (15 base + 8 bonus) &nbsp;|&nbsp; 3rd = 18 pts (14 base + 4 bonus)
+      </div>
+
+      <h3>Tournament of Champions</h3>
+      <p>Play in 4 of 10 League Tournaments to be eligible. Starting stack: 10,000 chips + league points &times; 100 bonus chips. Tournament winners receive an additional 2,000 chip bonus add-on per win.</p>
+      <p>If you participated in fewer than 4 events, you can pay $20 per missed event at the TOC to participate.</p>
+      <div class="highlight-box">
+        <strong>Example:</strong> 50 league points = 10,000 base + 5,000 bonus = 15,000 chip starting stack.
+      </div>
+
+      <h3>Payout Structure</h3>
+      <p>Top 25% of players are paid in monthly games and the TOC. There must always be a winner — chopping is allowed but one hand must be played to determine 1st place.</p>
+
+      <table class="payouts-table">
+        <thead>
+          <tr>
+            <th>Place</th>
+            <th>10 or fewer players</th>
+            <th>11–14 players</th>
+            <th>15–18 players</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1st</td><td>65%</td><td>50%</td><td>50%</td></tr>
+          <tr><td>2nd</td><td>35%</td><td>32%</td><td>25%</td></tr>
+          <tr><td>3rd</td><td>—</td><td>18%</td><td>16%</td></tr>
+          <tr><td>4th</td><td>—</td><td>—</td><td>9%</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Blind Structure</h3>
+
+      <table class="blinds-table">
+        <thead>
+          <tr>
+            <th>Level</th>
+            <th>Small Blind</th>
+            <th>Big Blind</th>
+            <th>Ante</th>
+            <th>Duration</th>
+            <th>Start Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>$25</td><td>$50</td><td>—</td><td>25 min</td><td>8:00 PM</td></tr>
+          <tr><td>2</td><td>$50</td><td>$100</td><td>—</td><td>25 min</td><td>8:25 PM</td></tr>
+          <tr><td>3</td><td>$100</td><td>$200</td><td>—</td><td>25 min</td><td>8:50 PM</td></tr>
+          <tr><td>4</td><td>$200</td><td>$400</td><td>—</td><td>25 min</td><td>9:15 PM</td></tr>
+          <tr><td>5</td><td>$300</td><td>$600</td><td>—</td><td>25 min</td><td>9:40 PM</td></tr>
+          <tr><td>6</td><td>$400</td><td>$800</td><td>—</td><td>25 min</td><td>10:05 PM</td></tr>
+          <tr><td>7</td><td>$400</td><td>$800</td><td>$800</td><td>25 min</td><td>10:30 PM</td></tr>
+          <tr><td>8</td><td>$500</td><td>$1,000</td><td>$1,000</td><td>25 min</td><td>10:55 PM</td></tr>
+          <tr><td>9</td><td>$600</td><td>$1,200</td><td>$1,200</td><td>25 min</td><td>11:20 PM</td></tr>
+          <tr><td>10</td><td>$800</td><td>$1,600</td><td>$1,600</td><td>25 min</td><td>11:45 PM</td></tr>
+          <tr><td>11</td><td>$1,000</td><td>$2,000</td><td>$2,000</td><td>20 min</td><td>12:10 AM</td></tr>
+          <tr><td>12</td><td>$1,500</td><td>$3,000</td><td>$3,000</td><td>20 min</td><td>12:30 AM</td></tr>
+          <tr><td>13</td><td>$2,000</td><td>$4,000</td><td>$4,000</td><td>20 min</td><td>12:50 AM</td></tr>
+          <tr><td>14</td><td>$2,500</td><td>$5,000</td><td>$5,000</td><td>20 min</td><td>1:10 AM</td></tr>
+          <tr><td>15</td><td>$3,000</td><td>$6,000</td><td>$6,000</td><td>20 min</td><td>1:30 AM</td></tr>
+          <tr><td>16</td><td>$4,000</td><td>$8,000</td><td>$8,000</td><td>20 min</td><td>1:50 AM</td></tr>
+          <tr><td>17</td><td>$5,000</td><td>$10,000</td><td>$10,000</td><td>20 min</td><td>2:10 AM</td></tr>
+          <tr><td>18</td><td>$6,000</td><td>$12,000</td><td>$12,000</td><td>20 min</td><td>2:30 AM</td></tr>
+        </tbody>
+      </table>
+
+      <p><em>Big Blind Ante (BBA) is used. The Big Blind posts an ante equal to the Big Blind each round.</em></p>
+
+      <h3>House Rules</h3>
+      <div class="highlight-box" style="color:#c0392b;border-color:#c0392b;background:#fdf0ee">
+        A not-so-friendly reminder: we are not your wife, mother, or maid. If you don't clean up after yourself you will be suspended 1 game for the first offense and permanently for a second offense.
+      </div>
+      <ul>
+        <li>No smoking except cigars at Dave's Poker Room</li>
+        <li>No credit, IOUs, or checks</li>
+        <li>Events are BYOB</li>
+        <li>Please use the basement door in the rear of the house and keep it closed at all times</li>
+        <li>Only English may be spoken at the table</li>
+        <li>No phones at the table</li>
+        <li>Do not bend or mark the cards</li>
+        <li>Keep cards and chips on the table and in plain view at all times</li>
+        <li>Chips put into the pot stay in the pot</li>
+        <li>Check-raising is acceptable and encouraged</li>
+        <li>String bets are not allowed</li>
+        <li>No slow-rolling — turn over your winning hand promptly</li>
+        <li>Both hole cards must be revealed in a showdown to win</li>
+      </ul>
+
+      <h3>High Hand Jackpot (Optional)</h3>
+      <p>One-time $20 payment to participate. Eligible only after payment. The jackpot runs for the length of the tournament, excluding the championship. The TD/host must witness any qualifying hand. Both hole cards must be in play. The hand does not have to go to showdown.</p>
+
+    </div>
+  </main>
+</div>
+
+<footer class="site-footer">
+  <p>Spring Lakes Poker League &copy; 2008&ndash;2026 &nbsp;|&nbsp; Season XIX</p>
+</footer>
+
+</body>
+</html>

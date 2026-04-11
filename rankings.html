@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Season Rankings – Spring Lakes Poker League</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="supabase.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="index.html" class="site-title">SPRING LAKES POKER LEAGUE</a>
+    <nav class="site-nav">
+      <a href="index.html" class="nav-link">HOME</a>
+      <a href="schedule.html" class="nav-link">SCHEDULE</a>
+      <a href="rankings.html" class="nav-link active">SEASON RANKINGS</a>
+      <a href="rules.html" class="nav-link">RULES &amp; STRUCTURE</a>
+    </nav>
+    <button class="nav-toggle" onclick="toggleNav()">&#9776;</button>
+  </div>
+</header>
+
+<div class="hero-banner">
+  <img src="https://springlakespoker.com/wp-content/uploads/2025/11/SLPL-S19-Header.jpg"
+       onerror="this.style.display='none';document.querySelector('.hero-fallback').style.display='flex'"
+       alt="Spring Lakes Poker League Season XIX" class="hero-img">
+  <div class="hero-fallback" style="display:none">
+    <div class="hero-fallback-text">
+      <span class="hero-roman">XIX</span>
+      <span class="hero-name">SPRING LAKES<br>POKER LEAGUE</span>
+    </div>
+  </div>
+</div>
+
+<div class="page-body full-width">
+  <main class="main-content">
+
+    <h1 class="page-heading">SEASON RANKINGS</h1>
+    <div class="page-heading-divider"></div>
+
+    <div id="rankings-wrap">
+      <div class="loading-msg">Loading standings...</div>
+    </div>
+
+  </main>
+</div>
+
+<footer class="site-footer">
+  <p>Spring Lakes Poker League &copy; 2008&ndash;2026 &nbsp;|&nbsp; Season XIX</p>
+</footer>
+
+<script>
+async function loadRankings() {
+  const db = getSupabase();
+
+  // Load all events this season
+  const { data: events } = await db
+    .from('events')
+    .select('id, event_number, event_name, player_count')
+    .eq('season', 19)
+    .order('event_number');
+
+  // Load all results with player names
+  const { data: results } = await db
+    .from('results')
+    .select('*, events(event_number, player_count), players(name)')
+    .eq('events.season', 19);
+
+  const wrap = document.getElementById('rankings-wrap');
+
+  if (!results || results.length === 0) {
+    wrap.innerHTML = '<p class="muted" style="text-align:center;padding:2rem">No results yet this season.</p>';
+    return;
+  }
+
+  // Build player standings map
+  const playerMap = {};
+
+  results.forEach(r => {
+    if (!r.players) return;
+    const name = r.players.name;
+    if (!playerMap[name]) {
+      playerMap[name] = {
+        name,
+        events: 0,
+        wins: 0,
+        totalPoints: 0,
+        tocBonusChips: 0,
+        eventPoints: {} // event_number -> points
+      };
+    }
+    const p = playerMap[name];
+    p.events++;
+    p.totalPoints += r.points;
+    p.tocBonusChips += r.toc_bonus_chips || 0;
+    if (r.is_winner) p.wins++;
+    if (r.events) {
+      p.eventPoints[r.events.event_number] = r.points;
+    }
+  });
+
+  // Sort: by total points desc
+  const standings = Object.values(playerMap).sort((a,b) => {
+    if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+    return b.wins - a.wins;
+  });
+
+  // Assign ranks (tied players share rank)
+  let rank = 1;
+  standings.forEach((p, i) => {
+    if (i > 0 && standings[i].totalPoints === standings[i-1].totalPoints) {
+      p.rank = standings[i-1].rank;
+    } else {
+      p.rank = rank;
+    }
+    rank = i + 2;
+  });
+
+  const numEvents = events ? events.length : 10;
+  const maxEvents = 10;
+
+  // Build header columns E1–E10
+  let eventHeaders = '';
+  for (let e = 1; e <= maxEvents; e++) {
+    const played = events && events.find(ev => ev.event_number === e);
+    eventHeaders += `<th title="Event ${e}">E${e}</th>`;
+  }
+
+  let html = `
+    <div style="overflow-x:auto">
+    <table class="rankings-table" id="standings-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Evts</th>
+          <th>W</th>
+          ${eventHeaders}
+          <th>TOTAL<br>POINTS</th>
+          <th>TOC BONUS<br>CHIPS</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  standings.forEach(p => {
+    const rankClass = p.rank === 1 ? 'rank-1' : p.rank === 2 ? 'rank-2' : p.rank === 3 ? 'rank-3' : '';
+    const tocQual = p.events >= 4 || p.wins > 0;
+
+    let eventCols = '';
+    for (let e = 1; e <= maxEvents; e++) {
+      const pts = p.eventPoints[e];
+      const isWin = pts !== undefined && results.some(r =>
+        r.players?.name === p.name && r.events?.event_number === e && r.is_winner
+      );
+      if (pts !== undefined) {
+        eventCols += `<td class="event-pts ${isWin ? 'has-win' : ''}">${pts}</td>`;
+      } else {
+        eventCols += `<td></td>`;
+      }
+    }
+
+    const tocDisplay = p.tocBonusChips > 0
+      ? `${(p.tocBonusChips).toLocaleString()}`
+      : '0';
+
+    html += `
+      <tr class="${rankClass}">
+        <td class="rank-num">${p.rank}</td>
+        <td>
+          ${p.name}
+          ${tocQual ? '<span class="toc-badge">TOC</span>' : ''}
+        </td>
+        <td>${p.events}</td>
+        <td>${p.wins > 0 ? '<strong>' + p.wins + '</strong>' : ''}</td>
+        ${eventCols}
+        <td class="total-pts">${p.totalPoints}</td>
+        <td>${tocDisplay}</td>
+      </tr>
+    `;
+  });
+
+  html += '</tbody></table></div>';
+
+  // Add legend
+  html += `
+    <p style="margin-top:1rem;font-size:0.82rem;color:#888">
+      <span style="color:#e85d26;font-weight:700">Orange</span> = event win &nbsp;|&nbsp;
+      <span class="toc-badge">TOC</span> = qualified for Tournament of Champions (4+ events or a win) &nbsp;|&nbsp;
+      TOC Bonus Chips = league pts &times; 100 + 2,000 per win
+    </p>
+  `;
+
+  // Updated timestamp
+  html += `<p style="font-size:0.8rem;color:#bbb;margin-top:0.5rem">Last updated: ${new Date().toLocaleString()}</p>`;
+
+  wrap.innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', loadRankings);
+</script>
+</body>
+</html>

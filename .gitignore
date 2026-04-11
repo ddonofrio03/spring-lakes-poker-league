@@ -1,0 +1,10 @@
+# Keep admin credentials out of public git repo
+admin/config.js
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+*.swp
