@@ -130,43 +130,46 @@ async function loadHome() {
     schedWrap.innerHTML = html;
   }
 
-  // Latest finished event
+  // All finished events, newest to oldest
   const { data: events } = await db
     .from('events')
     .select('*, results(*, players(name))')
     .eq('season', 19)
-    .order('event_number', {ascending: false})
-    .limit(1);
+    .order('event_number', {ascending: false});
 
   const latestWrap = document.getElementById('latest-event-wrap');
   if (events && events.length) {
-    const ev = events[0];
-    const results = ev.results.sort((a,b) => a.finish_position - b.finish_position);
-    const d = new Date(ev.event_date + 'T12:00:00');
-    let html = `
-      <h2 class="event-title">${ev.event_name}</h2>
-      <p class="event-meta">${d.toLocaleString('en-US',{month:'long',day:'numeric',year:'numeric'})}</p>
-      <table class="results-table">
-        <thead>
-          <tr>
-            <th>Place</th>
-            <th>Player</th>
-            <th>Points</th>
-            <th>Payout</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-    results.forEach(r => {
-      const medal = r.finish_position === 1 ? '🥇 ' : r.finish_position === 2 ? '🥈 ' : r.finish_position === 3 ? '🥉 ' : '';
-      html += `<tr class="${r.finish_position <= 3 ? 'money' : ''}">
-        <td>${r.finish_position}</td>
-        <td>${medal}${r.players.name}</td>
-        <td>${r.points}</td>
-        <td>${r.payout > 0 ? '$' + r.payout.toFixed(0) : ''}</td>
-      </tr>`;
+    let html = '';
+    events.forEach((ev, idx) => {
+      const results = ev.results.sort((a,b) => a.finish_position - b.finish_position);
+      const d = new Date(ev.event_date + 'T12:00:00');
+      // Add divider between events
+      if (idx > 0) html += '<hr style="border:none;border-top:1px solid #eee;margin:2rem 0">';
+      html += `
+        <h2 class="event-title">${ev.event_name}</h2>
+        <p class="event-meta">${d.toLocaleString('en-US',{month:'long',day:'numeric',year:'numeric'})}</p>
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Place</th>
+              <th>Player</th>
+              <th>Points</th>
+              <th>Payout</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      results.forEach(r => {
+        const medal = r.finish_position === 1 ? '🥇 ' : r.finish_position === 2 ? '🥈 ' : r.finish_position === 3 ? '🥉 ' : '';
+        html += `<tr class="${r.finish_position <= 3 ? 'money' : ''}">
+          <td>${r.finish_position}</td>
+          <td>${medal}${r.players.name}</td>
+          <td>${r.points}</td>
+          <td>${r.payout > 0 ? '$' + r.payout.toFixed(0) : ''}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
     });
-    html += '</tbody></table>';
     latestWrap.innerHTML = html;
   } else {
     latestWrap.innerHTML = '<p class="muted" style="padding:2rem 0">No events recorded yet this season.</p>';
