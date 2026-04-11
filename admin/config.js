@@ -1,0 +1,4 @@
+const SUPABASE_URL = 'https://eitveufhzgfrkrjmsuhd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpdHZldWZoemdmcmtyam1zdWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTY3OTAsImV4cCI6MjA5MTQ5Mjc5MH0.j-LeX88aT3CL3ShCZ7JemisLoBdv7ti1AgH7wwBG2P4';
+const ADMIN_PASSWORD = 'SpringLakes2008$$';
+const SEASON = 19;
