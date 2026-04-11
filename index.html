@@ -31,6 +31,8 @@
 <div class="page-body">
   <main class="main-content">
 
+    <div id="announcement-wrap"></div>
+
     <div class="home-latest">
       <div id="latest-event-wrap">
         <div class="loading-msg">Loading latest event...</div>
@@ -66,6 +68,23 @@
 <script>
 async function loadHome() {
   const db = getSupabase();
+
+  // Load announcement
+  const { data: ann } = await db
+    .from('announcements')
+    .select('body, updated_at')
+    .order('updated_at', { ascending: false })
+    .limit(1);
+
+  const annWrap = document.getElementById('announcement-wrap');
+  if (ann && ann.length && ann[0].body && ann[0].body.trim()) {
+    annWrap.innerHTML = `
+      <div class="announcement-block">
+        <h3>&#128138; League Update</h3>
+        <p>${ann[0].body.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>
+      </div>
+    `;
+  }
 
   // Load schedule for sidebar
   const { data: sched } = await db

@@ -758,3 +758,43 @@ input:focus, select:focus, textarea:focus {
   .rankings-table { font-size: 0.82rem; }
   .rankings-table th, .rankings-table td { padding: 0.5rem 0.4rem; }
 }
+
+/* ─── RANKINGS: alternating column shading ─── */
+.rankings-table tbody tr:nth-child(even) td {
+  background-color: #f0f7f0;
+}
+.rankings-table tbody tr:nth-child(odd) td {
+  background-color: #ffffff;
+}
+.rankings-table tbody tr:hover td {
+  background-color: #e8f4e8 !important;
+}
+/* Keep 1st place orange tint on top */
+.rankings-table .rank-1 td {
+  background-color: #fff8f5 !important;
+}
+.rankings-table .rank-1:hover td {
+  background-color: #ffeee8 !important;
+}
+
+/* ─── HOME: announcement block ─── */
+.announcement-block {
+  background: #fff8f5;
+  border-left: 4px solid #e85d26;
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.8rem;
+}
+.announcement-block h3 {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #e85d26;
+  margin-bottom: 0.4rem;
+}
+.announcement-block p {
+  font-size: 1rem;
+  color: #1a1a1a;
+  white-space: pre-line;
+  line-height: 1.6;
+}

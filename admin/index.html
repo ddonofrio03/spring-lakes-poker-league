@@ -36,6 +36,7 @@
       <a href="#" onclick="showTab('tab-event')">Enter Results</a>
       <a href="#" onclick="showTab('tab-roster')">Roster</a>
       <a href="#" onclick="showTab('tab-history')">Event History</a>
+      <a href="#" onclick="showTab('tab-announce')">Announcement</a>
       <a href="../index.html" target="_blank">View Site ↗</a>
       <a href="#" onclick="doLogout()" style="color:#e85d26">Logout</a>
     </nav>
@@ -181,6 +182,27 @@
     </div><!-- end tab-history -->
 
   </div><!-- admin-body -->
+    <!-- ═══ TAB: ANNOUNCEMENT ═══ -->
+    <div id="tab-announce" class="admin-tab" style="display:none">
+      <div class="admin-card">
+        <h2>HOME PAGE ANNOUNCEMENT</h2>
+        <p style="font-size:0.9rem;color:#666;margin-bottom:1rem">
+          This text appears at the top of the public homepage. Use it for tonight's sign-up list,
+          reminders, or any league news. Leave blank to hide it.
+        </p>
+        <div class="form-group">
+          <label>Announcement Text</label>
+          <textarea id="ann-body" rows="6"
+            placeholder="e.g. Tonight's S19E4 sign-ups:&#10;&#10;Dave D ✓&#10;Greg C ✓&#10;Phil M ✓&#10;..."></textarea>
+        </div>
+        <div style="display:flex;gap:0.75rem;margin-top:0.5rem">
+          <button class="btn btn-primary" onclick="saveAnnouncement()">Save &amp; Publish</button>
+          <button class="btn btn-outline" onclick="clearAnnouncement()">Clear (Hide from Site)</button>
+        </div>
+        <p class="success-msg" id="ann-status" style="display:none"></p>
+      </div>
+    </div><!-- end tab-announce -->
+
 </div><!-- admin-view -->
 
 <script>
@@ -208,6 +230,7 @@ function showTab(id) {
   document.getElementById(id).style.display = 'block';
   if (id === 'tab-roster') loadRoster();
   if (id === 'tab-history') loadHistory();
+  if (id === 'tab-announce') loadAnnouncement();
 }
 
 // ─── Supabase ───
@@ -551,6 +574,46 @@ async function deleteEvent(id, name) {
     loadHistory();
   }
 }
+
+// ─── Announcement ───
+let annId = null;
+
+async function loadAnnouncement() {
+  const db = getDB();
+  const { data } = await db.from('announcements').select('*').limit(1);
+  if (data && data.length) {
+    annId = data[0].id;
+    document.getElementById('ann-body').value = data[0].body || '';
+  }
+}
+
+async function saveAnnouncement() {
+  const db = getDB();
+  const body = document.getElementById('ann-body').value.trim();
+  const status = document.getElementById('ann-status');
+
+  if (annId) {
+    await db.from('announcements').update({ body, updated_at: new Date().toISOString() }).eq('id', annId);
+  } else {
+    const { data } = await db.from('announcements').insert({ body }).select();
+    if (data) annId = data[0].id;
+  }
+  status.textContent = '✓ Published to homepage!';
+  status.style.display = 'block';
+  setTimeout(() => { status.style.display = 'none'; }, 3000);
+}
+
+async function clearAnnouncement() {
+  const db = getDB();
+  document.getElementById('ann-body').value = '';
+  if (annId) {
+    await db.from('announcements').update({ body: '', updated_at: new Date().toISOString() }).eq('id', annId);
+  }
+  showStatus('Announcement cleared — hidden from homepage.');
+}
+
+// Load announcement when tab is opened
+const origShowTab = showTab;
 </script>
 
 </body>
