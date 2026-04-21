@@ -3,7 +3,7 @@
  * 
  * Displays RSVP form for upcoming events with attendee list,
  * converts to results display after event date.
- * Place at top of homepage (above past event summaries).
+ * No email field - uses name as identifier.
  */
 
 const ACTIVE_EVENT = {
@@ -59,20 +59,6 @@ const ACTIVE_EVENT = {
     const eventDate = new Date(event.event_date);
     const daysUntil = Math.ceil((eventDate - new Date()) / (1000 * 60 * 60 * 24));
 
-    // Check if user already RSVP'd
-    const userEmail = localStorage.getItem('slpl_user_email') || '';
-    let existingRsvp = null;
-    
-    if (userEmail) {
-      const { data } = await db
-        .from('rsvps')
-        .select('*')
-        .eq('event_id', event.id)
-        .eq('email', userEmail)
-        .single();
-      existingRsvp = data;
-    }
-
     const html = `
       <div class="active-event-section">
         <div class="active-event-header">
@@ -122,19 +108,6 @@ const ACTIVE_EVENT = {
               id="rsvp-name" 
               name="name"
               placeholder="First & Last Name"
-              value="${existingRsvp ? existingRsvp.name : ''}"
-              required
-            >
-          </div>
-
-          <div class="form-group">
-            <label for="rsvp-email">Email</label>
-            <input 
-              type="email" 
-              id="rsvp-email" 
-              name="email"
-              placeholder="your@email.com"
-              value="${existingRsvp ? existingRsvp.email : userEmail}"
               required
             >
           </div>
@@ -147,7 +120,6 @@ const ACTIVE_EVENT = {
                   type="radio" 
                   name="attending" 
                   value="yes"
-                  ${existingRsvp && existingRsvp.attending === true ? 'checked' : ''}
                   required
                 >
                 <span>Yes, I'm in</span>
@@ -157,7 +129,6 @@ const ACTIVE_EVENT = {
                   type="radio" 
                   name="attending" 
                   value="no"
-                  ${existingRsvp && existingRsvp.attending === false ? 'checked' : ''}
                 >
                 <span>No, can't make it</span>
               </label>
@@ -166,7 +137,6 @@ const ACTIVE_EVENT = {
                   type="radio" 
                   name="attending" 
                   value="maybe"
-                  ${existingRsvp && existingRsvp.attending === null ? 'checked' : ''}
                 >
                 <span>Maybe</span>
               </label>
@@ -180,13 +150,10 @@ const ACTIVE_EVENT = {
               name="notes"
               placeholder="Any notes for the organizer?"
               rows="3"
-            >${existingRsvp ? existingRsvp.notes : ''}</textarea>
+            ></textarea>
           </div>
 
-          <button type="submit" class="btn-primary">
-            ${existingRsvp ? 'Update RSVP' : 'Submit RSVP'}
-          </button>
-          <p class="form-note">Your email will be saved locally so you can update your RSVP later.</p>
+          <button type="submit" class="btn-primary">Submit RSVP</button>
         </form>
 
         <div id="form-message" class="form-message" style="display:none;"></div>
@@ -308,21 +275,24 @@ const ACTIVE_EVENT = {
       e.preventDefault();
 
       const formData = new FormData(form);
-      const name = formData.get('name');
-      const email = formData.get('email');
+      const name = formData.get('name').trim();
       const attending = formData.get('attending') === 'yes' ? true : formData.get('attending') === 'no' ? false : null;
       const notes = formData.get('notes');
 
-      // Save email to localStorage for future reference
-      localStorage.setItem('slpl_user_email', email);
+      if (!name) {
+        messageDiv.className = 'form-message error';
+        messageDiv.textContent = '✗ Please enter your name';
+        messageDiv.style.display = 'block';
+        return;
+      }
 
       try {
-        // Check if RSVP already exists
+        // Check if RSVP already exists for this name
         const { data: existing } = await db
           .from('rsvps')
           .select('id')
           .eq('event_id', eventId)
-          .eq('email', email)
+          .eq('name', name)
           .single();
 
         let result;
@@ -330,7 +300,7 @@ const ACTIVE_EVENT = {
           // Update existing RSVP
           result = await db
             .from('rsvps')
-            .update({ name, attending, notes, updated_at: new Date().toISOString() })
+            .update({ attending, notes, updated_at: new Date().toISOString() })
             .eq('id', existing.id);
         } else {
           // Insert new RSVP
@@ -339,7 +309,7 @@ const ACTIVE_EVENT = {
             .insert([{
               event_id: eventId,
               name,
-              email,
+              email: name,
               attending,
               notes,
               created_at: new Date().toISOString()
@@ -352,6 +322,9 @@ const ACTIVE_EVENT = {
         messageDiv.className = 'form-message success';
         messageDiv.textContent = existing ? '✓ RSVP updated!' : '✓ RSVP submitted!';
         messageDiv.style.display = 'block';
+
+        // Clear form
+        form.reset();
 
         // Reload RSVP count and attendee list
         this.loadRsvpCount(eventId, db);
