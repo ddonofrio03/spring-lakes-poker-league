@@ -1,6 +1,6 @@
 /* ===================================================
-   ACTIVE EVENT COMPONENT STYLES (RSVP System)
-   Minimal, non-conflicting with main stylesheet
+   ACTIVE EVENT COMPONENT - Minimal styling
+   Only affects #active-event-container
    ================================================= */
 
 #active-event-container {
@@ -8,46 +8,43 @@
 }
 
 .active-event-section {
-  background: linear-gradient(135deg, #f9f9f9 0%, #f5f5f5 100%);
+  background: #ffffff;
   border: 2px solid #e85d26;
   border-radius: 8px;
-  padding: 2.5rem;
-  box-shadow: 0 4px 12px rgba(232, 93, 38, 0.1);
+  padding: 2rem;
   margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .active-event-section.completed {
-  background: linear-gradient(135deg, #f0fdf4 0%, #e8faee 100%);
   border-color: #22c55e;
 }
 
-/* Header */
 .active-event-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 2rem;
   gap: 2rem;
+  flex-wrap: wrap;
 }
 
 .active-event-title h2 {
-  font-size: 2rem;
+  font-size: 1.8rem;
   font-weight: 900;
   color: #1a1a1a;
-  margin: 0.5rem 0 0.5rem 0;
-  letter-spacing: 0.05em;
+  margin: 0.5rem 0 0;
 }
 
 .event-label {
   display: inline-block;
   background: #e85d26;
-  color: #ffffff;
-  padding: 0.4rem 0.8rem;
-  border-radius: 20px;
-  font-size: 0.7rem;
+  color: white;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
   margin-bottom: 0.5rem;
 }
 
@@ -57,45 +54,42 @@
 
 .event-meta {
   color: #666;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   margin: 0.5rem 0 0;
 }
 
 .bullet {
-  margin: 0 0.5rem;
+  margin: 0 0.3rem;
   color: #e85d26;
 }
 
-/* Countdown */
 .event-countdown {
-  background: rgba(232, 93, 38, 0.08);
+  background: #f9f9f9;
   border: 2px solid #e85d26;
   border-radius: 8px;
-  padding: 1.5rem;
+  padding: 1.2rem;
   text-align: center;
-  min-width: 110px;
+  min-width: 100px;
 }
 
 .days-number {
-  font-size: 2.5rem;
+  font-size: 2.2rem;
   font-weight: 900;
   color: #e85d26;
   line-height: 1;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.2rem;
 }
 
 .days-label {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   font-weight: 600;
+  text-transform: uppercase;
 }
 
-/* Details Grid */
 .event-details-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
   padding-bottom: 2rem;
@@ -109,17 +103,16 @@
 
 .detail-label {
   font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #e85d26;
-  margin-bottom: 0.5rem;
   font-weight: 700;
+  text-transform: uppercase;
+  color: #e85d26;
+  margin-bottom: 0.4rem;
 }
 
 .detail-value {
-  font-size: 1.1rem;
-  color: #1a1a1a;
+  font-size: 1rem;
   font-weight: 600;
+  color: #1a1a1a;
 }
 
 /* Attendee List */
@@ -130,12 +123,11 @@
 }
 
 .attendee-list-section h3 {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 700;
+  text-transform: uppercase;
   color: #e85d26;
   margin: 0 0 1rem 0;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .attendee-list {
@@ -143,67 +135,61 @@
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 0.75rem;
 }
 
 .attendee-item {
-  background: #ffffff;
+  background: #f9f9f9;
   border: 1px solid #ddd;
   border-radius: 4px;
-  padding: 0.75rem 1rem;
-  color: #1a1a1a;
+  padding: 0.6rem 0.8rem;
   font-size: 0.9rem;
   font-weight: 500;
-  transition: all 0.2s ease;
+  color: #1a1a1a;
 }
 
 .attendee-item:hover {
-  background: #f9f9f9;
+  background: #f0f7f0;
   border-color: #e85d26;
-  box-shadow: 0 2px 6px rgba(232, 93, 38, 0.1);
 }
 
 /* Form */
 .rsvp-form {
-  max-width: 600px;
+  max-width: 500px;
 }
 
 .rsvp-form h3 {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
+  text-transform: uppercase;
   color: #e85d26;
   margin: 0 0 1.5rem 0;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.2rem;
 }
 
 .form-group label {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  color: #444;
-  margin-bottom: 0.5rem;
   text-transform: uppercase;
+  color: #444;
+  margin-bottom: 0.4rem;
 }
 
 .form-group input[type="text"],
 .form-group input[type="email"],
 .form-group textarea {
   width: 100%;
-  padding: 0.875rem;
-  background: #ffffff;
+  padding: 0.6rem;
+  background: white;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-family: inherit;
   font-size: 1rem;
-  color: #1a1a1a;
-  transition: all 0.2s;
+  font-family: inherit;
   box-sizing: border-box;
 }
 
@@ -211,74 +197,58 @@
 .form-group textarea:focus {
   outline: none;
   border-color: #e85d26;
-  box-shadow: 0 0 0 3px rgba(232, 93, 38, 0.1);
+  box-shadow: 0 0 0 2px rgba(232, 93, 38, 0.1);
 }
 
-.form-group input::placeholder {
-  color: #999;
-}
-
-/* Radio buttons */
 .radio-group {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.6rem;
 }
 
 .radio-label {
   display: flex;
   align-items: center;
+  gap: 0.5rem;
   cursor: pointer;
   user-select: none;
-  gap: 0.5rem;
 }
 
 .radio-label input[type="radio"] {
-  width: 18px;
-  height: 18px;
   cursor: pointer;
   accent-color: #e85d26;
-  flex-shrink: 0;
 }
 
 .radio-label span {
-  color: #1a1a1a;
   font-size: 1rem;
-  font-weight: 500;
+  color: #1a1a1a;
 }
 
-/* Buttons */
 .btn-primary,
 .btn-secondary {
-  padding: 0.75rem 1.5rem;
-  font-size: 0.9rem;
+  padding: 0.7rem 1.4rem;
+  font-size: 0.85rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s;
   font-family: inherit;
+  transition: 0.2s;
 }
 
 .btn-primary {
   background: #e85d26;
-  color: #ffffff;
+  color: white;
 }
 
 .btn-primary:hover {
   background: #d14a1a;
-  box-shadow: 0 4px 12px rgba(232, 93, 38, 0.3);
-}
-
-.btn-primary:active {
-  transform: translateY(1px);
 }
 
 .btn-secondary {
   background: #22c55e;
-  color: #ffffff;
+  color: white;
   display: inline-block;
   margin-top: 1rem;
 }
@@ -287,14 +257,12 @@
   background: #16a34a;
 }
 
-/* Messages */
 .form-message {
-  padding: 1rem;
+  padding: 0.8rem;
   border-radius: 4px;
   margin-top: 1rem;
   font-weight: 600;
   text-align: center;
-  display: none;
 }
 
 .form-message.success {
@@ -312,16 +280,15 @@
 .form-note {
   font-size: 0.8rem;
   color: #666;
-  margin-top: 0.75rem;
+  margin-top: 0.5rem;
   font-style: italic;
 }
 
-/* Results Table */
+/* Results Table - keep minimal */
 .results-table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 2rem;
-  background: #ffffff;
 }
 
 .results-table thead {
@@ -330,17 +297,16 @@
 }
 
 .results-table th {
-  padding: 1rem;
+  padding: 0.8rem;
   text-align: left;
   font-weight: 700;
   color: #e85d26;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
 }
 
 .results-table td {
-  padding: 0.875rem 1rem;
+  padding: 0.8rem;
   border-bottom: 1px solid #eee;
   color: #1a1a1a;
 }
@@ -349,66 +315,21 @@
   background: #fef3c7;
 }
 
-.results-table tbody tr:hover {
-  background: #f9f9f9;
-}
-
-.results-table .finish {
-  font-weight: 700;
-  color: #e85d26;
-  font-size: 1rem;
-}
-
-.results-table .name {
-  font-weight: 600;
-}
-
-.results-table .points {
-  text-align: center;
-  font-weight: 600;
-}
-
-.results-table .payout {
-  text-align: right;
-  color: #22c55e;
-  font-weight: 600;
-}
-
 /* Responsive */
 @media (max-width: 768px) {
   .active-event-header {
     flex-direction: column;
-    gap: 1rem;
   }
 
   .active-event-title h2 {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
   }
 
   .event-details-grid {
     grid-template-columns: 1fr;
   }
 
-  .active-event-section {
-    padding: 1.5rem;
-  }
-
   .attendee-list {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 480px) {
-  .radio-group {
-    gap: 0.5rem;
-  }
-
-  .results-table {
-    font-size: 0.9rem;
-  }
-
-  .results-table th,
-  .results-table td {
-    padding: 0.6rem;
   }
 }
