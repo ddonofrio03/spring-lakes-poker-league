@@ -1,9 +1,8 @@
 /**
  * SPRING LAKES POKER LEAGUE - ACTIVE EVENT COMPONENT
  * 
- * Displays RSVP form for upcoming events with attendee list,
- * converts to results display after event date.
- * No email field - uses name as identifier.
+ * Displays RSVP form with player dropdown + "Add your Name" option
+ * Converts to results display after event date.
  */
 
 const ACTIVE_EVENT = {
@@ -103,13 +102,18 @@ const ACTIVE_EVENT = {
           
           <div class="form-group">
             <label for="rsvp-name">Your Name</label>
-            <input 
-              type="text" 
-              id="rsvp-name" 
-              name="name"
-              placeholder="First & Last Name"
-              required
-            >
+            <div class="name-input-group">
+              <select id="rsvp-name" name="name" required>
+                <option value="">-- Select your name --</option>
+                <option value="add-new">+ Add your name</option>
+              </select>
+              <input 
+                type="text" 
+                id="rsvp-name-input" 
+                placeholder="Enter your name"
+                style="display:none;"
+              >
+            </div>
           </div>
 
           <div class="form-group">
@@ -161,9 +165,57 @@ const ACTIVE_EVENT = {
     `;
 
     container.innerHTML = html;
+    
+    // Load players and setup dropdown
+    await this.loadPlayers(db);
+    
     this.loadRsvpCount(event.id, db);
     this.loadAttendeeList(event.id, db);
     this.attachFormHandler(event.id, db);
+  },
+
+  // Load players from database into dropdown
+  async loadPlayers(db) {
+    try {
+      const { data: players, error } = await db
+        .from('players')
+        .select('name')
+        .eq('active', true)
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+
+      const select = document.getElementById('rsvp-name');
+      if (select && players && players.length > 0) {
+        // Add players to dropdown (after placeholder and "add-new")
+        players.forEach(p => {
+          const option = document.createElement('option');
+          option.value = p.name;
+          option.textContent = p.name;
+          select.appendChild(option);
+        });
+      }
+
+      // Setup dropdown change handler
+      if (select) {
+        select.addEventListener('change', (e) => {
+          const nameInput = document.getElementById('rsvp-name-input');
+          if (e.target.value === 'add-new') {
+            // Show text input for new name
+            select.style.display = 'none';
+            nameInput.style.display = 'block';
+            nameInput.focus();
+            nameInput.value = '';
+          } else {
+            // Hide text input, show dropdown
+            select.style.display = 'block';
+            nameInput.style.display = 'none';
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Error loading players:', err);
+    }
   },
 
   // Load and display RSVP count
@@ -268,20 +320,29 @@ const ACTIVE_EVENT = {
   attachFormHandler(eventId, db) {
     const form = document.getElementById('rsvp-form');
     const messageDiv = document.getElementById('form-message');
+    const select = document.getElementById('rsvp-name');
+    const nameInput = document.getElementById('rsvp-name-input');
 
     if (!form) return;
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
+      // Get name from either dropdown or text input
+      let name = '';
+      if (select.style.display !== 'none') {
+        name = select.value;
+      } else {
+        name = nameInput.value.trim();
+      }
+
       const formData = new FormData(form);
-      const name = formData.get('name').trim();
       const attending = formData.get('attending') === 'yes' ? true : formData.get('attending') === 'no' ? false : null;
       const notes = formData.get('notes');
 
       if (!name) {
         messageDiv.className = 'form-message error';
-        messageDiv.textContent = '✗ Please enter your name';
+        messageDiv.textContent = '✗ Please select or enter your name';
         messageDiv.style.display = 'block';
         return;
       }
@@ -323,8 +384,10 @@ const ACTIVE_EVENT = {
         messageDiv.textContent = existing ? '✓ RSVP updated!' : '✓ RSVP submitted!';
         messageDiv.style.display = 'block';
 
-        // Clear form
+        // Reset form
         form.reset();
+        select.style.display = 'block';
+        nameInput.style.display = 'none';
 
         // Reload RSVP count and attendee list
         this.loadRsvpCount(eventId, db);
