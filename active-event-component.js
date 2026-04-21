@@ -1,7 +1,8 @@
 /**
  * SPRING LAKES POKER LEAGUE - ACTIVE EVENT COMPONENT
  * 
- * Displays RSVP form for upcoming events, converts to results display after event date.
+ * Displays RSVP form for upcoming events with attendee list,
+ * converts to results display after event date.
  * Place at top of homepage (above past event summaries).
  */
 
@@ -81,7 +82,7 @@ const ACTIVE_EVENT = {
             <p class="event-meta">
               ${eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} 
               <span class="bullet">•</span> 
-              ${event.game_type}
+              ${event.game_type} at ${event.location || 'Dave\'s Poker Room'}
             </p>
           </div>
           <div class="event-countdown">
@@ -100,9 +101,15 @@ const ACTIVE_EVENT = {
             <span class="detail-value">${event.game_type}</span>
           </div>
           <div class="detail-item">
-            <span class="detail-label">Current RSVPs</span>
-            <span class="detail-value" id="rsvp-count">Loading...</span>
+            <span class="detail-label">Confirmed Attendees</span>
+            <span class="detail-value" id="rsvp-count">0</span>
           </div>
+        </div>
+
+        <!-- Attendee List -->
+        <div class="attendee-list-section" id="attendee-list-section" style="display:none;">
+          <h3>Who's Attending</h3>
+          <ul id="attendee-list" class="attendee-list"></ul>
         </div>
 
         <form id="rsvp-form" class="rsvp-form">
@@ -167,11 +174,11 @@ const ACTIVE_EVENT = {
           </div>
 
           <div class="form-group">
-            <label for="rsvp-notes">Notes (dietary, buy-in preference, etc.)</label>
+            <label for="rsvp-notes">Notes (optional)</label>
             <textarea 
               id="rsvp-notes" 
               name="notes"
-              placeholder="Optional: Any notes for the organizer?"
+              placeholder="Any notes for the organizer?"
               rows="3"
             >${existingRsvp ? existingRsvp.notes : ''}</textarea>
           </div>
@@ -188,7 +195,49 @@ const ACTIVE_EVENT = {
 
     container.innerHTML = html;
     this.loadRsvpCount(event.id, db);
+    this.loadAttendeeList(event.id, db);
     this.attachFormHandler(event.id, db);
+  },
+
+  // Load and display RSVP count
+  async loadRsvpCount(eventId, db) {
+    const { count } = await db
+      .from('rsvps')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .eq('attending', true);
+
+    const countEl = document.getElementById('rsvp-count');
+    if (countEl) {
+      countEl.textContent = count || 0;
+    }
+  },
+
+  // Load and display attendee list
+  async loadAttendeeList(eventId, db) {
+    const { data: attendees, error } = await db
+      .from('rsvps')
+      .select('id, name, created_at')
+      .eq('event_id', eventId)
+      .eq('attending', true)
+      .order('created_at', { ascending: true });
+
+    const listSection = document.getElementById('attendee-list-section');
+    const listEl = document.getElementById('attendee-list');
+
+    if (error) {
+      console.error('Error loading attendees:', error);
+      return;
+    }
+
+    if (attendees && attendees.length > 0) {
+      listSection.style.display = 'block';
+      listEl.innerHTML = attendees
+        .map(a => `<li class="attendee-item">${a.name}</li>`)
+        .join('');
+    } else {
+      listSection.style.display = 'none';
+    }
   },
 
   // Render past event with results
@@ -248,20 +297,6 @@ const ACTIVE_EVENT = {
     container.innerHTML = html;
   },
 
-  // Load and display RSVP count
-  async loadRsvpCount(eventId, db) {
-    const { count } = await db
-      .from('rsvps')
-      .select('id', { count: 'exact', head: true })
-      .eq('event_id', eventId)
-      .eq('attending', true);
-
-    const countEl = document.getElementById('rsvp-count');
-    if (countEl) {
-      countEl.textContent = count || 0;
-    }
-  },
-
   // Attach form submission handler
   attachFormHandler(eventId, db) {
     const form = document.getElementById('rsvp-form');
@@ -318,8 +353,9 @@ const ACTIVE_EVENT = {
         messageDiv.textContent = existing ? '✓ RSVP updated!' : '✓ RSVP submitted!';
         messageDiv.style.display = 'block';
 
-        // Reload RSVP count
+        // Reload RSVP count and attendee list
         this.loadRsvpCount(eventId, db);
+        this.loadAttendeeList(eventId, db);
 
         // Clear message after 3 seconds
         setTimeout(() => {

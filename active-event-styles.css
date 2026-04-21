@@ -1,6 +1,6 @@
 /* ===================================================
    ACTIVE EVENT COMPONENT STYLES
-   RSVP Form & Results Display
+   RSVP Form, Results Display & Attendee List
    ================================================= */
 
 #active-event-container {
@@ -123,6 +123,49 @@
   font-size: 1.125rem;
   color: #ffffff;
   font-weight: 500;
+}
+
+/* ===== ATTENDEE LIST ===== */
+
+.attendee-list-section {
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.attendee-list-section h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #d4af37;
+  margin: 0 0 1rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.attendee-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.attendee-item {
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.attendee-item:hover {
+  background: rgba(212, 175, 55, 0.15);
+  border-color: #d4af37;
 }
 
 /* ===== RSVP FORM ===== */
@@ -365,6 +408,10 @@
   .active-event-section {
     padding: 1.5rem;
   }
+
+  .attendee-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 480px) {
@@ -379,5 +426,9 @@
   .results-table th,
   .results-table td {
     padding: 0.6rem 0.5rem;
+  }
+
+  .attendee-item {
+    font-size: 0.85rem;
   }
 }
