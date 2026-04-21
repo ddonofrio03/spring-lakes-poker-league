@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Spring Lakes Poker League</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="active-event-styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="supabase.js"></script>
@@ -30,6 +31,9 @@
 
 <div class="page-body">
   <main class="main-content">
+
+    <!-- Active Event Component (RSVP or Results) -->
+    <div id="active-event-container"></div>
 
     <div id="announcement-wrap"></div>
 
@@ -178,5 +182,8 @@ async function loadHome() {
 
 document.addEventListener('DOMContentLoaded', loadHome);
 </script>
+
+<!-- Active Event Component JavaScript -->
+<script src="active-event-component.js"></script>
 </body>
 </html>

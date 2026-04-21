@@ -1,0 +1,383 @@
+/* ===================================================
+   ACTIVE EVENT COMPONENT STYLES
+   RSVP Form & Results Display
+   ================================================= */
+
+#active-event-container {
+  margin-bottom: 3rem;
+}
+
+.active-event-section {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 2px solid #d4af37;
+  border-radius: 8px;
+  padding: 2.5rem;
+  box-shadow: 0 10px 40px rgba(212, 175, 55, 0.15);
+}
+
+.active-event-section.completed {
+  background: linear-gradient(135deg, #0f3d1a 0%, #1a5a2a 100%);
+  border-color: #4a9d6f;
+}
+
+/* ===== Header Section ===== */
+
+.active-event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  gap: 2rem;
+}
+
+.active-event-title h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0.5rem 0 0.25rem 0;
+  letter-spacing: 1px;
+}
+
+.event-label {
+  display: inline-block;
+  background: linear-gradient(45deg, #d4af37, #f0e68c);
+  color: #1a1a2e;
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+}
+
+.event-label.completed {
+  background: linear-gradient(45deg, #4a9d6f, #6fb584);
+  color: #ffffff;
+}
+
+.event-meta {
+  color: #b0b0b0;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.bullet {
+  margin: 0 0.5rem;
+  color: #d4af37;
+}
+
+/* Countdown timer */
+
+.event-countdown {
+  background: rgba(212, 175, 55, 0.1);
+  border: 2px solid #d4af37;
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+  min-width: 120px;
+}
+
+.days-number {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #d4af37;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.days-label {
+  font-size: 0.875rem;
+  color: #b0b0b0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ===== Details Grid ===== */
+
+.event-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #d4af37;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.detail-value {
+  font-size: 1.125rem;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+/* ===== RSVP FORM ===== */
+
+.rsvp-form {
+  max-width: 600px;
+}
+
+.rsvp-form h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #d4af37;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group textarea {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(212, 175, 55, 0.3);
+  border-radius: 6px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1rem;
+  color: #ffffff;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="email"]:focus,
+.form-group textarea:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #d4af37;
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+}
+
+.form-group input::placeholder {
+  color: #888888;
+}
+
+/* Radio buttons */
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.radio-label input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  margin-right: 0.75rem;
+  cursor: pointer;
+  accent-color: #d4af37;
+}
+
+.radio-label span {
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* Button */
+
+.btn-primary,
+.btn-secondary {
+  padding: 0.875rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Outfit', sans-serif;
+}
+
+.btn-primary {
+  background: linear-gradient(45deg, #d4af37, #f0e68c);
+  color: #1a1a2e;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(212, 175, 55, 0.4);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: linear-gradient(45deg, #4a9d6f, #6fb584);
+  color: #ffffff;
+  display: inline-block;
+  margin-top: 1rem;
+}
+
+.btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(74, 157, 111, 0.4);
+}
+
+/* Form Messages */
+
+.form-message {
+  padding: 1rem 1.25rem;
+  border-radius: 6px;
+  margin-top: 1.5rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.form-message.success {
+  background: rgba(74, 157, 111, 0.15);
+  color: #6fb584;
+  border: 1px solid #4a9d6f;
+}
+
+.form-message.error {
+  background: rgba(220, 53, 69, 0.15);
+  color: #ff6b6b;
+  border: 1px solid #dc3545;
+}
+
+.form-note {
+  font-size: 0.85rem;
+  color: #888888;
+  margin-top: 1rem;
+  font-style: italic;
+}
+
+/* ===== RESULTS TABLE ===== */
+
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 2rem;
+}
+
+.results-table thead {
+  background: rgba(212, 175, 55, 0.1);
+  border-bottom: 2px solid #d4af37;
+}
+
+.results-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 700;
+  color: #d4af37;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.85rem;
+}
+
+.results-table td {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  color: #ffffff;
+}
+
+.results-table tbody tr.winner {
+  background: rgba(212, 175, 55, 0.1);
+}
+
+.results-table tbody tr:hover {
+  background: rgba(212, 175, 55, 0.05);
+}
+
+.results-table .finish {
+  font-weight: 700;
+  color: #d4af37;
+  font-size: 1.125rem;
+}
+
+.results-table .name {
+  font-weight: 600;
+}
+
+.results-table .points {
+  text-align: center;
+  font-weight: 600;
+}
+
+.results-table .payout {
+  text-align: right;
+  color: #6fb584;
+  font-weight: 600;
+}
+
+/* ===== RESPONSIVE ===== */
+
+@media (max-width: 768px) {
+  .active-event-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .active-event-title h2 {
+    font-size: 1.75rem;
+  }
+
+  .event-countdown {
+    align-self: flex-start;
+  }
+
+  .event-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .active-event-section {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .radio-group {
+    flex-direction: column;
+  }
+
+  .results-table {
+    font-size: 0.875rem;
+  }
+
+  .results-table th,
+  .results-table td {
+    padding: 0.6rem 0.5rem;
+  }
+}
