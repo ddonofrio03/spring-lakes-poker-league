@@ -55,10 +55,14 @@ const ACTIVE_EVENT = {
     }
   },
 
-  // Render upcoming event with RSVP form
+// Render upcoming event with RSVP form
   async renderUpcomingEvent(event, container, db) {
-    const eventDate = new Date(event.event_date);
-    const daysUntil = Math.ceil((eventDate - new Date()) / (1000 * 60 * 60 * 24));
+    // Parse date in Eastern Time (ET)
+    const eventDate = new Date(event.event_date + 'T00:00:00');
+    // Adjust for ET timezone offset
+    const offset = eventDate.getTimezoneOffset();
+    const etDate = new Date(eventDate.getTime() + (offset * 60000));
+    const daysUntil = Math.ceil((etDate - new Date()) / (1000 * 60 * 60 * 24));
 
     const html = `
       <div class="active-event-section">
@@ -66,8 +70,8 @@ const ACTIVE_EVENT = {
           <div class="active-event-title">
             <span class="event-label">UPCOMING</span>
             <h2>E${event.event_number} ${event.event_name}</h2>
-            <p class="event-meta">
-              ${eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} 
+          <p class="event-meta">
+              ${etDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} 
               <span class="bullet">•</span> 
               ${event.game_type} at ${event.location || 'Dave\'s Poker Room'}
             </p>
