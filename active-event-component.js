@@ -3,6 +3,8 @@
  * 
  * Displays RSVP form with player dropdown + "Add your Name" option
  * Converts to results display after event date.
+ * 
+ * Cache bust: 2026-04-21T21:45:00Z
  */
 
 const ACTIVE_EVENT = {
