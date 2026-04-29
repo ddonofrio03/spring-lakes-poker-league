@@ -207,18 +207,56 @@
 
 <script>
 // ─── Auth ───
-function doLogin() {
+// Password is held in memory only after a successful server-side verify.
+// All writes go through the Edge Function, which re-checks the password
+// using a server-side secret (never trusts the client).
+let SESSION_PW = null;
+const ADMIN_FN_URL = `${SUPABASE_URL}/functions/v1/admin`;
+
+async function adminCall(action, payload) {
+  const res = await fetch(ADMIN_FN_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({ password: SESSION_PW, action, payload }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+async function doLogin() {
   const pw = document.getElementById('admin-pw').value;
-  if (pw === ADMIN_PASSWORD) {
+  // Verify with the server — a bogus saveAnnouncement with the current body,
+  // or a no-op call. Easier: ping with a known action and a guard.
+  try {
+    const res = await fetch(ADMIN_FN_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ password: pw, action: '__ping__' }),
+    });
+    // 400 (Unknown action) means password was OK; 401 means wrong password.
+    if (res.status === 401) {
+      document.getElementById('login-error').style.display = 'block';
+      return;
+    }
+    SESSION_PW = pw;
     document.getElementById('login-view').style.display = 'none';
     document.getElementById('admin-view').style.display = 'block';
     init();
-  } else {
+  } catch (e) {
+    document.getElementById('login-error').textContent = 'Could not reach server.';
     document.getElementById('login-error').style.display = 'block';
   }
 }
 
 function doLogout() {
+  SESSION_PW = null;
   document.getElementById('admin-view').style.display = 'none';
   document.getElementById('login-view').style.display = 'block';
   document.getElementById('admin-pw').value = '';
@@ -399,35 +437,12 @@ async function saveEvent() {
   btn.textContent = 'Saving...';
 
   try {
-    // Upsert event
-    const { data: evData, error: evErr } = await db
-      .from('events')
-      .upsert({
-        season: SEASON,
-        event_number: parseInt(eventNum),
-        event_name: eventName,
-        game_type: gameType,
-        event_date: eventDate,
-        location,
-        player_count: totalPlayers
-      }, { onConflict: 'season,event_number', ignoreDuplicates: false })
-      .select()
-      .single();
-
-    if (evErr) throw evErr;
-
-    const eventId = evData.id;
-
-    // Delete existing results for this event (re-entry)
-    await db.from('results').delete().eq('event_id', eventId);
-
     const eventPot = totalPlayers * 60;
     const resultRows = entries.map(e => {
       const calc = calcPoints(e.position, totalPlayers);
       const payoutPct = calcPayoutPct(e.position, totalPlayers);
       const tocBonus = e.position === 1 ? 2000 : 0;
       return {
-        event_id: eventId,
         player_id: e.playerId,
         finish_position: e.position,
         points: calc.points,
@@ -437,8 +452,18 @@ async function saveEvent() {
       };
     });
 
-    const { error: resErr } = await db.from('results').insert(resultRows);
-    if (resErr) throw resErr;
+    await adminCall('saveEvent', {
+      event: {
+        season: SEASON,
+        event_number: parseInt(eventNum),
+        event_name: eventName,
+        game_type: gameType,
+        event_date: eventDate,
+        location,
+        player_count: totalPlayers,
+      },
+      results: resultRows,
+    });
 
     showStatus(`Event "${eventName}" saved successfully with ${entries.length} players!`, 'success');
     clearFinishForm();
@@ -490,27 +515,25 @@ async function loadRoster() {
 async function addPlayer() {
   const name = document.getElementById('new-player-name').value.trim();
   if (!name) return;
-  const db = getDB();
-  const { error } = await db.from('players').insert({ name, active: true });
-  if (error) {
-    showStatus(`Error: ${error.message}`, 'error');
-  } else {
+  try {
+    await adminCall('addPlayer', { name });
     document.getElementById('new-player-name').value = '';
     showStatus(`Player "${name}" added.`);
     allPlayers = null; // force reload
     await loadRoster();
     await init(); // refresh allPlayers
+  } catch (err) {
+    showStatus(`Error: ${err.message}`, 'error');
   }
 }
 
 async function togglePlayer(id, currentActive) {
-  const db = getDB();
-  const { error } = await db.from('players').update({ active: !currentActive }).eq('id', id);
-  if (error) {
-    showStatus(`Error: ${error.message}`, 'error');
-  } else {
+  try {
+    await adminCall('togglePlayer', { id, active: !currentActive });
     await loadRoster();
     await init();
+  } catch (err) {
+    showStatus(`Error: ${err.message}`, 'error');
   }
 }
 
@@ -565,13 +588,12 @@ async function loadHistory() {
 
 async function deleteEvent(id, name) {
   if (!confirm(`Delete "${name}" and all its results? This cannot be undone.`)) return;
-  const db = getDB();
-  const { error } = await db.from('events').delete().eq('id', id);
-  if (error) {
-    showStatus(`Error: ${error.message}`, 'error');
-  } else {
+  try {
+    await adminCall('deleteEvent', { id });
     showStatus(`Event "${name}" deleted.`);
     loadHistory();
+  } catch (err) {
+    showStatus(`Error: ${err.message}`, 'error');
   }
 }
 
@@ -588,28 +610,27 @@ async function loadAnnouncement() {
 }
 
 async function saveAnnouncement() {
-  const db = getDB();
   const body = document.getElementById('ann-body').value.trim();
   const status = document.getElementById('ann-status');
-
-  if (annId) {
-    await db.from('announcements').update({ body, updated_at: new Date().toISOString() }).eq('id', annId);
-  } else {
-    const { data } = await db.from('announcements').insert({ body }).select();
-    if (data) annId = data[0].id;
+  try {
+    const res = await adminCall('saveAnnouncement', { id: annId, body });
+    annId = res.id;
+    status.textContent = '✓ Published to homepage!';
+    status.style.display = 'block';
+    setTimeout(() => { status.style.display = 'none'; }, 3000);
+  } catch (err) {
+    showStatus(`Error: ${err.message}`, 'error');
   }
-  status.textContent = '✓ Published to homepage!';
-  status.style.display = 'block';
-  setTimeout(() => { status.style.display = 'none'; }, 3000);
 }
 
 async function clearAnnouncement() {
-  const db = getDB();
   document.getElementById('ann-body').value = '';
-  if (annId) {
-    await db.from('announcements').update({ body: '', updated_at: new Date().toISOString() }).eq('id', annId);
+  try {
+    if (annId) await adminCall('saveAnnouncement', { id: annId, body: '' });
+    showStatus('Announcement cleared — hidden from homepage.');
+  } catch (err) {
+    showStatus(`Error: ${err.message}`, 'error');
   }
-  showStatus('Announcement cleared — hidden from homepage.');
 }
 
 // Load announcement when tab is opened
