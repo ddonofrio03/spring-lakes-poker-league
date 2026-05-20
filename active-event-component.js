@@ -4,7 +4,7 @@
  * Displays RSVP form with player dropdown + "Add your Name" option
  * Converts to results display after event date.
  * 
- * Cache bust: 2026-04-21T21:45:00Z
+ * Cache bust: 2026-05-20T12:00:00Z
  */
 
 const ACTIVE_EVENT = {
@@ -19,29 +19,37 @@ const ACTIVE_EVENT = {
     }
 
     try {
-      // Get the next upcoming event (event_date >= today)
+      // Get the next upcoming event from the schedule table
       const today = new Date().toISOString().split('T')[0];
-      
-      const { data: events, error } = await db
-        .from('events')
+
+      const { data: upcoming, error } = await db
+        .from('schedule')
         .select('*')
         .eq('season', 19)
+        .eq('is_toc', false)
         .gte('event_date', today)
         .order('event_number', { ascending: true })
         .limit(1);
 
       if (error) throw error;
 
-      if (events && events.length > 0) {
-        const upcomingEvent = events[0];
+      if (upcoming && upcoming.length > 0) {
+        const sched = upcoming[0];
+        const upcomingEvent = {
+          id: sched.id,
+          event_number: sched.event_number,
+          event_name: sched.game_type || 'NLHE',
+          event_date: sched.event_date,
+          game_type: sched.game_type || 'NLHE',
+          location: sched.location || "Dave's Poker Room"
+        };
         await this.renderUpcomingEvent(upcomingEvent, container, db);
       } else {
-        // No upcoming events, show the most recent completed event
+        // No upcoming events, show the most recent completed event from events table
         const { data: pastEvents } = await db
           .from('events')
           .select('*')
           .eq('season', 19)
-          .lt('event_date', today)
           .order('event_number', { ascending: false })
           .limit(1);
 
