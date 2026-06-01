@@ -48,8 +48,12 @@ create table if not exists schedule (
   game_type text default 'NLHE',
   location text default 'Dave''s Poker Room',
   notes text,
-  is_toc boolean default false
+  is_toc boolean default false,
+  cancelled boolean default false
 );
+
+-- Backfill for existing deployments
+alter table schedule add column if not exists cancelled boolean default false;
 
 -- Enable Row Level Security (allow public reads)
 alter table players enable row level security;

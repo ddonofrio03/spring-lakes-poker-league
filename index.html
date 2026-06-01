@@ -99,8 +99,8 @@ async function loadHome() {
 
   const today = new Date().toISOString().slice(0,10);
 
-  // Next event
-  const next = sched ? sched.find(s => s.event_date >= today) : null;
+  // Next event (skip cancelled)
+  const next = sched ? sched.find(s => s.event_date >= today && !s.cancelled) : null;
   const nextWrap = document.getElementById('next-event-wrap');
   if (next) {
     const d = new Date(next.event_date + 'T12:00:00');
@@ -123,10 +123,13 @@ async function loadHome() {
       const d = new Date(s.event_date + 'T12:00:00');
       const label = s.is_toc ? 'TOC' : `E${s.event_number}`;
       const past = s.event_date < today;
-      html += `<li class="sched-item ${past ? 'past' : ''}">
+      const cancelled = !!s.cancelled;
+      const itemStyle = cancelled ? 'text-decoration:line-through;color:#bbb' : '';
+      const tag = cancelled ? ' <span style="color:#e85d26;font-weight:700;font-size:0.7rem;text-decoration:none;display:inline-block;margin-left:0.25rem">CANCELLED</span>' : '';
+      html += `<li class="sched-item ${past ? 'past' : ''}" style="${itemStyle}">
         <span class="sched-label">${label}</span>
         <span class="sched-info">
-          ${d.toLocaleString('en-US',{month:'short',day:'numeric'})} &mdash; ${s.game_type}
+          ${d.toLocaleString('en-US',{month:'short',day:'numeric'})} &mdash; ${s.game_type}${tag}
         </span>
       </li>`;
     });

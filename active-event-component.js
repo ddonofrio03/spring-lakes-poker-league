@@ -27,6 +27,7 @@ const ACTIVE_EVENT = {
         .select('*')
         .eq('season', 19)
         .eq('is_toc', false)
+        .or('cancelled.is.null,cancelled.eq.false')
         .gte('event_date', today)
         .order('event_number', { ascending: true })
         .limit(1);
