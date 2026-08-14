@@ -123,6 +123,7 @@
         <p style="font-size:0.85rem;color:#888;margin-bottom:1rem">
           Points are calculated automatically. Set total players above first.
           The winner (1st place) gets 2&times; base points + 2,000 TOC bonus chips.
+          Payouts are rounded to the nearest $10 &mdash; type over any amount to correct it.
         </p>
 
         <div style="overflow-x:auto">
@@ -140,8 +141,11 @@
           </table>
         </div>
 
+        <div id="pot-total" style="margin-top:0.9rem;font-size:0.9rem;color:#666"></div>
+
         <div style="margin-top:1rem;display:flex;gap:0.75rem;flex-wrap:wrap">
           <button class="btn btn-primary" onclick="saveEvent()" id="save-btn">Save Event Results</button>
+          <button class="btn btn-outline" onclick="resetPayouts()">Reset Payouts</button>
           <button class="btn btn-outline" onclick="clearFinishForm()">Clear</button>
         </div>
       </div>
@@ -320,14 +324,12 @@ function updatePlayerCount() {
 function buildFinishTable(totalPlayers, prefilled) {
   // prefilled = [{position, name}]
   const preview = previewAllPoints(totalPlayers);
-  const eventPot = totalPlayers * 60; // $60 per player to prize pool
 
   const tbody = document.getElementById('finish-body');
   tbody.innerHTML = '';
 
   preview.forEach(row => {
     const pre = prefilled.find(p => p.position === row.position);
-    const payout = row.payoutPct > 0 ? (eventPot * row.payoutPct).toFixed(0) : '';
 
     // Build player dropdown
     let options = '<option value="">-- Select Player --</option>';
@@ -335,6 +337,16 @@ function buildFinishTable(totalPlayers, prefilled) {
       const sel = pre && pre.name === p.name ? 'selected' : '';
       options += `<option value="${p.id}" data-name="${p.name}" ${sel}>${p.name}</option>`;
     });
+
+    // Money spots get an editable payout box so a bad number can be corrected
+    // before saving; everyone else just shows a blank cell.
+    const payoutCell = row.payout > 0
+      ? `<input type="number" class="payout-input" data-pos="${row.position}"
+                value="${row.payout}" step="10" min="0"
+                oninput="updatePotTotal()" style="width:90px">`
+      : `<input type="number" class="payout-input" data-pos="${row.position}"
+                value="" step="10" min="0" placeholder="—"
+                oninput="updatePotTotal()" style="width:90px">`;
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -347,11 +359,47 @@ function buildFinishTable(totalPlayers, prefilled) {
       <td>
         <span class="pts-preview ${row.position === 1 ? 'winner' : ''}">${row.points}</span>
       </td>
-      <td style="color:${row.inMoney ? '#e85d26' : '#aaa'}">${row.inMoney ? '✓ $' + (payout||'') : ''}</td>
-      <td style="color:#555">${payout ? '$' + payout : ''}</td>
+      <td style="color:${row.inMoney ? '#e85d26' : '#aaa'}">${row.inMoney ? '✓' : ''}</td>
+      <td>${payoutCell}</td>
     `;
     tbody.appendChild(tr);
   });
+
+  updatePotTotal();
+}
+
+// ─── Payout total vs pot ───
+// Warns if the edited payouts no longer add up to the money collected.
+function updatePotTotal() {
+  const totalPlayers = parseInt(document.getElementById('ev-players').value) || 0;
+  const pot = totalPlayers * BUY_IN;
+  let paid = 0;
+  document.querySelectorAll('.payout-input').forEach(inp => {
+    paid += parseFloat(inp.value) || 0;
+  });
+
+  const el = document.getElementById('pot-total');
+  if (!el) return;
+
+  const diff = paid - pot;
+  const money = n => '$' + n.toLocaleString('en-US');
+  if (diff === 0) {
+    el.innerHTML = `Pot: <strong>${money(pot)}</strong> &middot; Paying out: <strong>${money(paid)}</strong> <span style="color:#2a8a4a">&check; balanced</span>`;
+  } else {
+    el.innerHTML = `Pot: <strong>${money(pot)}</strong> &middot; Paying out: <strong>${money(paid)}</strong> <span style="color:#c0392b">&#9888; ${diff > 0 ? 'over' : 'under'} by ${money(Math.abs(diff))}</span>`;
+  }
+}
+
+// Reset the payout boxes back to the auto-calculated amounts
+function resetPayouts() {
+  const totalPlayers = parseInt(document.getElementById('ev-players').value) || 0;
+  if (!totalPlayers) return;
+  const payouts = calcRoundedPayouts(totalPlayers, totalPlayers * BUY_IN);
+  document.querySelectorAll('.payout-input').forEach(inp => {
+    const pos = parseInt(inp.dataset.pos);
+    inp.value = payouts[pos] || '';
+  });
+  updatePotTotal();
 }
 
 // ─── CSV Parser ───
@@ -437,10 +485,15 @@ async function saveEvent() {
   btn.textContent = 'Saving...';
 
   try {
-    const eventPot = totalPlayers * 60;
+    // Payouts come from the (editable) boxes, not recalculated, so any manual
+    // correction the admin typed in is what actually gets saved.
+    const editedPayouts = {};
+    document.querySelectorAll('.payout-input').forEach(inp => {
+      editedPayouts[parseInt(inp.dataset.pos)] = parseFloat(inp.value) || 0;
+    });
+
     const resultRows = entries.map(e => {
       const calc = calcPoints(e.position, totalPlayers);
-      const payoutPct = calcPayoutPct(e.position, totalPlayers);
       const tocBonus = e.position === 1 ? 2000 : 0;
       return {
         player_id: e.playerId,
@@ -448,7 +501,7 @@ async function saveEvent() {
         points: calc.points,
         is_winner: e.position === 1,
         toc_bonus_chips: tocBonus,
-        payout: payoutPct > 0 ? parseFloat((eventPot * payoutPct).toFixed(2)) : 0
+        payout: editedPayouts[e.position] || 0
       };
     });
 
@@ -542,7 +595,7 @@ async function loadHistory() {
   const db = getDB();
   const { data: events } = await db
     .from('events')
-    .select('*, results(finish_position, is_winner, points, players(name))')
+    .select('*, results(finish_position, is_winner, points, payout, players(name))')
     .eq('season', SEASON)
     .order('event_number');
 
