@@ -1,5 +1,6 @@
-# Keep admin credentials out of public git repo
-admin/config.js
+# NOTE: admin/config.js is intentionally tracked — GitHub Pages has to serve
+# it. It must therefore contain only public values (Supabase URL + anon key).
+# Secrets live as Edge Function secrets in Supabase, never in this repo.
 
 # OS files
 .DS_Store

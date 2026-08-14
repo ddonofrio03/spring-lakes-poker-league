@@ -50,9 +50,13 @@ Edit `admin/config.js` (admin panel only):
 ```js
 const SUPABASE_URL = 'https://xxxx.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGci...';
-const ADMIN_PASSWORD = 'SpringLakes2008$$';
 const SEASON = 19;
 ```
+
+> ⚠️ The admin password is **not** stored in this repo. It lives only as the
+> `ADMIN_PASSWORD` secret on the `admin` Edge Function (Supabase dashboard →
+> Edge Functions → admin → Secrets). Never commit it to any file here — this
+> repository is public.
 
 ### Step 5 — Deploy to GitHub Pages
 1. Create a new GitHub repository (can be public — admin/config.js is gitignored)
@@ -78,7 +82,7 @@ Or just link directly to the pages from your WordPress nav.
 ## Using the Admin Panel
 
 1. Go to `admin/index.html`
-2. Enter password: `SpringLakes2008$$`
+2. Enter the admin password (stored as the `ADMIN_PASSWORD` secret in Supabase)
 3. **Enter Results tab:**
    - Fill in event number, name, date, game type, player count
    - Either paste the BlindValet CSV export, or manually assign finish positions from the dropdowns

@@ -25,10 +25,11 @@ supabase link --project-ref eitveufhzgfrkrjmsuhd
 Get your **service_role key** from:
 Supabase dashboard → Project Settings → API → `service_role` (secret).
 
-> ⚠️ Never paste the service_role key into any file in the GitHub repo.
+> ⚠️ This repository is **public**. Never paste the service_role key or the
+> admin password into any file here — set them as secrets only.
 
 ```
-supabase secrets set ADMIN_PASSWORD='SpringLakes2008$$'
+supabase secrets set ADMIN_PASSWORD='<choose an admin password>'
 supabase secrets set PROJECT_URL='https://eitveufhzgfrkrjmsuhd.supabase.co'
 supabase secrets set SERVICE_ROLE_KEY='<paste service_role key here>'
 ```
