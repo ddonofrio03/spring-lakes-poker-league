@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tournament of Champions – Spring Lakes Poker League</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="active-event-styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="supabase.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="index.html" class="site-title">SPRING LAKES POKER LEAGUE</a>
+    <nav class="site-nav">
+      <a href="index.html" class="nav-link">HOME</a>
+      <a href="toc.html" class="nav-link active">TOC</a>
+      <a href="schedule.html" class="nav-link">SCHEDULE</a>
+      <a href="rankings.html" class="nav-link">SEASON RANKINGS</a>
+      <a href="rules.html" class="nav-link">RULES &amp; STRUCTURE</a>
+    </nav>
+    <button class="nav-toggle" onclick="toggleNav()">&#9776;</button>
+  </div>
+</header>
+
+<div class="hero-banner">
+  <img src="header.jpeg" alt="Spring Lakes Poker League Season XIX" class="hero-img">
+</div>
+
+<div class="page-body full-width">
+  <main class="main-content">
+
+    <h1 class="page-heading">TOURNAMENT OF CHAMPIONS</h1>
+    <div class="page-heading-divider"></div>
+
+    <div id="active-event-container">
+      <div class="loading-msg">Loading...</div>
+    </div>
+
+  </main>
+</div>
+
+<footer class="site-footer">
+  <p>Spring Lakes Poker League &copy; 2008&ndash;2026 &nbsp;|&nbsp; Season XIX</p>
+</footer>
+
+<script src="toc-component.js"></script>
+<script>
+async function loadTOC() {
+  const db = getSupabase();
+  const container = document.getElementById('active-event-container');
+  try {
+    const { data: sched, error } = await db
+      .from('schedule')
+      .select('*')
+      .eq('season', TOC.SEASON)
+      .eq('is_toc', true)
+      .limit(1);
+    if (error) throw error;
+    if (!sched || !sched.length) {
+      container.innerHTML = '<p class="muted">The Tournament of Champions isn\'t on the schedule yet.</p>';
+      return;
+    }
+    await TOC.render(container, sched[0], db);
+  } catch (err) {
+    console.error('Error loading TOC:', err);
+    container.innerHTML = '<p class="error">Error loading the Tournament of Champions</p>';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadTOC);
+</script>
+</body>
+</html>

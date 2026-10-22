@@ -361,3 +361,137 @@
 #rsvp-name-input {
   width: 100%;
 }
+
+/* ===================================================
+   TOURNAMENT OF CHAMPIONS
+   ================================================= */
+
+.toc-small {
+  font-size: 0.85rem;
+}
+
+.toc-note {
+  background: #fff7f2;
+  border-left: 3px solid #e85d26;
+  padding: 0.8rem 1rem;
+  font-size: 0.9rem;
+  color: #444;
+  margin: 0 0 2rem;
+}
+
+.toc-seating-wrap {
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.toc-seating-wrap h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 0.3rem;
+}
+
+.toc-seating-sub {
+  font-size: 0.85rem;
+  color: #888;
+  margin: 0 0 1rem;
+}
+
+.toc-tables {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.toc-table-card {
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.toc-table-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  background: #1a1a1a;
+  color: #fff;
+  padding: 0.6rem 0.9rem;
+}
+
+.toc-table-head h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.toc-table-head span {
+  font-size: 0.8rem;
+  color: #bbb;
+}
+
+.toc-seat-table {
+  margin: 0;
+}
+
+.toc-seat-table td:nth-child(3),
+.toc-seat-table td:nth-child(4),
+.toc-seat-table th:nth-child(3),
+.toc-seat-table th:nth-child(4) {
+  text-align: right;
+}
+
+.toc-owed-note {
+  color: #999;
+  font-size: 0.75rem;
+}
+
+.toc-table-foot {
+  display: flex;
+  justify-content: space-between;
+  background: #f9f9f9;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.toc-balance {
+  font-size: 0.9rem;
+  color: #555;
+  margin: 1rem 0 0;
+}
+
+.toc-waiting {
+  font-size: 0.85rem;
+  color: #888;
+  margin: 0.6rem 0 0;
+}
+
+.toc-player-info {
+  margin-top: 0.6rem;
+  font-size: 0.9rem;
+  color: #444;
+  background: #f9f9f9;
+  padding: 0.6rem 0.8rem;
+  border-radius: 4px;
+}
+
+.toc-seat-table th {
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .toc-seat-table th,
+  .toc-seat-table td {
+    padding: 0.5rem 0.45rem;
+  }
+
+  .toc-owed-note {
+    display: none;
+  }
+}
+
+.toc-pot-breakdown {
+  font-size: 0.85rem;
+  color: #666;
+  margin: -1rem 0 1.5rem;
+}

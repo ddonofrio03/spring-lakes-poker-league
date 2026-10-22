@@ -26,15 +26,16 @@ const ACTIVE_EVENT = {
         .from('schedule')
         .select('*')
         .eq('season', 19)
-        .eq('is_toc', false)
         .or('cancelled.is.null,cancelled.eq.false')
         .gte('event_date', today)
-        .order('event_number', { ascending: true })
+        .order('event_date', { ascending: true })
         .limit(1);
 
       if (error) throw error;
 
-      if (upcoming && upcoming.length > 0) {
+      if (upcoming && upcoming.length > 0 && upcoming[0].is_toc) {
+        await TOC.render(container, upcoming[0], db);
+      } else if (upcoming && upcoming.length > 0) {
         const sched = upcoming[0];
         const upcomingEvent = {
           id: sched.id,
