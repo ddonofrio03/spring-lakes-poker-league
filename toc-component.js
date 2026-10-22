@@ -99,8 +99,8 @@ const TOC = {
 
     return groups
       .map(g => [...g].sort((a, b) => b.chips - a.chips || a.name.localeCompare(b.name)))
-      // The pinned player's table is always the Main Tan Table; the rest by chips
-      .sort((a, b) => hasPinned(b) - hasPinned(a) || sum(b) - sum(a))
+      // Main Tan Table is the pinned player's table, then the bigger table, then more chips
+      .sort((a, b) => hasPinned(b) - hasPinned(a) || b.length - a.length || sum(b) - sum(a))
       .map((g, i) => {
         const total = sum(g);
         return {
@@ -126,21 +126,23 @@ const TOC = {
     return seats.sort((a, b) => a.seat - b.seat);
   },
 
-  // Exact search: try every way to pick the larger table's players.
+  // Exact search: try every way to pick the Main Tan Table's players.
+  // Tan always gets the extra player on an odd count, and the pinned
+  // player (Dave) always sits at Tan.
   bestTwoWaySplit(sorted) {
     const n = sorted.length;
     const sizeA = Math.ceil(n / 2);
     const grand = sorted.reduce((s, p) => s + p.chips, 0);
+    const pinnedIdx = sorted.findIndex(p => p.name === this.PINNED.name);
     let bestMask = 0, bestDiff = Infinity;
 
     for (let mask = 0; mask < (1 << n); mask++) {
-      // Fix the chip leader at table A so mirror-image splits aren't tried twice
-      if (!(mask & 1)) continue;
+      if (pinnedIdx >= 0 && !(mask & (1 << pinnedIdx))) continue;
       let count = 0, sumA = 0;
       for (let i = 0; i < n; i++) {
         if (mask & (1 << i)) { count++; sumA += sorted[i].chips; }
       }
-      if (count !== sizeA && count !== n - sizeA) continue;
+      if (count !== sizeA) continue;
       const diff = Math.abs(sumA - (grand - sumA));
       if (diff < bestDiff) { bestDiff = diff; bestMask = mask; }
     }
