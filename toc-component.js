@@ -10,6 +10,7 @@
 const TOC = {
   SEASON: 19,
   BASE_STACK: 10000,
+  START_TIME: '6:00 PM',
   BUY_IN: 60,
   SEASON_POT: 1720, // TOC kitty collected during the season ($20 per regular-event entry)
   MISSED_EVENT_FEE: 20,
@@ -190,7 +191,7 @@ const TOC = {
             <span class="event-label">YOU'RE INVITED</span>
             <h2>Season ${this.SEASON} Tournament of Champions</h2>
             <p class="event-meta">
-              ${dateLabel} <span class="bullet">•</span> ${this.esc(sched.game_type || 'NLHE')} at ${this.esc(location)}
+              ${dateLabel} <span class="bullet">•</span> ${this.START_TIME} <span class="bullet">•</span> ${this.esc(sched.game_type || 'NLHE')} at ${this.esc(location)}
             </p>
           </div>
           <div class="event-countdown">
@@ -200,6 +201,10 @@ const TOC = {
         </div>
 
         <div class="event-details-grid">
+          <div class="detail-item">
+            <span class="detail-label">Start Time</span>
+            <span class="detail-value">${this.START_TIME}</span>
+          </div>
           <div class="detail-item">
             <span class="detail-label">Buy-in</span>
             <span class="detail-value">$${this.BUY_IN}</span>
