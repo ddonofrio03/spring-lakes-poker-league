@@ -1,7 +1,7 @@
 // =====================================================
 // SLPL Points Calculation Engine
 // Rules: N players, last = 1pt, up by 1 each place.
-// Top 25% in the money get bonus points:
+// Places paid per the payout table (about the top 25%) get bonus points:
 //   1st bonus = N (total = 2N)
 //   2nd bonus = floor(1st_bonus / 2)
 //   3rd bonus = floor(2nd_bonus / 2)  ... etc.
@@ -11,12 +11,20 @@
 // Every player contributes this much to the prize pool
 const BUY_IN = 60;
 
+// Payout percentages by field size, from the Rules & Structure page.
+// The number of entries is also the number of places "in the money".
+function payoutTable(totalPlayers) {
+  if (totalPlayers <= 10) return [0.65, 0.35];
+  if (totalPlayers <= 14) return [0.50, 0.32, 0.18];
+  return [0.50, 0.25, 0.16, 0.09];
+}
+
 function calcPoints(finishPosition, totalPlayers) {
   // Base points: last place = 1, add 1 per place up
   const basePoints = totalPlayers - finishPosition + 1;
 
-  // Determine money positions (top 25%, minimum 2)
-  const moneySpots = Math.max(2, Math.floor(totalPlayers * 0.25));
+  // Money positions come from the payout table (roughly the top 25%)
+  const moneySpots = payoutTable(totalPlayers).length;
 
   if (finishPosition > moneySpots) {
     // Not in the money — just base points
@@ -46,23 +54,7 @@ function calcTOCChips(totalLeaguePoints, wins) {
 
 // Calculate money payout percentage based on player count
 function calcPayoutPct(finishPosition, totalPlayers) {
-  const moneySpots = Math.max(2, Math.floor(totalPlayers * 0.25));
-  if (finishPosition > moneySpots) return 0;
-
-  if (totalPlayers <= 10) {
-    if (finishPosition === 1) return 0.65;
-    if (finishPosition === 2) return 0.35;
-  } else if (totalPlayers <= 14) {
-    if (finishPosition === 1) return 0.50;
-    if (finishPosition === 2) return 0.32;
-    if (finishPosition === 3) return 0.18;
-  } else {
-    if (finishPosition === 1) return 0.50;
-    if (finishPosition === 2) return 0.25;
-    if (finishPosition === 3) return 0.16;
-    if (finishPosition === 4) return 0.09;
-  }
-  return 0;
+  return payoutTable(totalPlayers)[finishPosition - 1] || 0;
 }
 
 // Round every payout to the nearest $10.
