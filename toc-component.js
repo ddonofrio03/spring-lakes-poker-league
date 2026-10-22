@@ -17,6 +17,8 @@ const TOC = {
   EVENTS_TO_QUALIFY: 4,
   SEATS_PER_TABLE: 9,
   TABLE_NAMES: ['Main Tan Table', 'New Cool Table', 'Table 3'],
+  // Dave's regular seat: always Main Tan Table, seat 5
+  PINNED: { name: 'Dave D', seat: 5 },
 
   esc(s) {
     return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -92,18 +94,36 @@ const TOC = {
       groups = this.greedySplit(sorted, numTables);
     }
 
+    const sum = g => g.reduce((s, p) => s + p.chips, 0);
+    const hasPinned = g => g.some(p => p.name === this.PINNED.name);
+
     return groups
       .map(g => [...g].sort((a, b) => b.chips - a.chips || a.name.localeCompare(b.name)))
-      .sort((a, b) => b.reduce((s, p) => s + p.chips, 0) - a.reduce((s, p) => s + p.chips, 0))
+      // The pinned player's table is always the Main Tan Table; the rest by chips
+      .sort((a, b) => hasPinned(b) - hasPinned(a) || sum(b) - sum(a))
       .map((g, i) => {
-        const total = g.reduce((s, p) => s + p.chips, 0);
+        const total = sum(g);
         return {
           name: this.TABLE_NAMES[i] || `Table ${i + 1}`,
-          seats: this.interleave(g).map((p, s) => ({ seat: s + 1, ...p })),
+          seats: this.assignSeats(g),
           total,
           avg: total / g.length
         };
       });
+  },
+
+  // Interleave stacks around the table, keeping the pinned player in their seat
+  assignSeats(group) {
+    const pinned = group.find(p => p.name === this.PINNED.name);
+    const others = this.interleave(group.filter(p => p !== pinned));
+    const seats = [];
+    let seat = 1;
+    others.forEach(p => {
+      if (pinned && seat === this.PINNED.seat) seat++;
+      seats.push({ seat: seat++, ...p });
+    });
+    if (pinned) seats.push({ seat: this.PINNED.seat, ...pinned });
+    return seats.sort((a, b) => a.seat - b.seat);
   },
 
   // Exact search: try every way to pick the larger table's players.
