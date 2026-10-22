@@ -25,6 +25,26 @@ const TOC = {
     return Math.round(n).toLocaleString('en-US');
   },
 
+  // Payout percentages from the Rules & Structure page table
+  payoutPcts(numPlayers) {
+    if (numPlayers <= 10) return [0.65, 0.35];
+    if (numPlayers <= 14) return [0.50, 0.32, 0.18];
+    return [0.50, 0.25, 0.16, 0.09];
+  },
+
+  // Round each place to the nearest $10; any rounding drift goes to 1st
+  // so the payouts always add up to the prize pool (same as the admin page).
+  calcPayouts(numPlayers, pool) {
+    const pcts = this.payoutPcts(numPlayers);
+    const payouts = pcts.map(pct => Math.round(pool * pct / 10) * 10);
+    payouts[0] += Math.round((pool - payouts.reduce((s, a) => s + a, 0)) / 10) * 10;
+    return payouts.map((amount, i) => ({ place: i + 1, pct: pcts[i], amount }));
+  },
+
+  ordinal(n) {
+    return n + (['th', 'st', 'nd', 'rd'][n] || 'th');
+  },
+
   // Season stats per player, same math as the rankings page
   async loadStandings(db) {
     const { data: results, error } = await db
@@ -202,6 +222,7 @@ const TOC = {
           </div>
         </div>
         <p class="toc-pot-breakdown" id="toc-pot-breakdown"></p>
+        <div class="toc-payouts" id="toc-payouts"></div>
 
         <p class="toc-note">
           Open to everyone who played Season ${this.SEASON}. Qualified (4+ events or a win)? Just sign up.
@@ -292,6 +313,24 @@ const TOC = {
       ` + $${this.fmt(buyIns)} in buy-ins (${signedUp.length} &times; $${this.BUY_IN})` +
       ` + $${this.fmt(addIns)} in missed-event add-ins` +
       ` = <strong>$${this.fmt(this.SEASON_POT + buyIns + addIns)}</strong>`;
+
+    const payoutsEl = document.getElementById('toc-payouts');
+    if (signedUp.length) {
+      const payouts = this.calcPayouts(signedUp.length, this.SEASON_POT + buyIns + addIns);
+      payoutsEl.innerHTML = `
+        <h3>Running Payouts</h3>
+        <p class="toc-seating-sub">Based on ${signedUp.length} player${signedUp.length !== 1 ? 's' : ''} signed up, per the <a href="rules.html">payout structure</a>. Changes as people sign up.</p>
+        <div class="toc-payout-row">
+          ${payouts.map(p => `
+            <div class="toc-payout">
+              <span class="toc-payout-place">${this.ordinal(p.place)}</span>
+              <span class="toc-payout-amt">$${this.fmt(p.amount)}</span>
+              <span class="toc-payout-pct">${Math.round(p.pct * 100)}%</span>
+            </div>`).join('')}
+        </div>`;
+    } else {
+      payoutsEl.innerHTML = '';
+    }
 
     const wrap = document.getElementById('toc-seating');
     if (!tables.length) {

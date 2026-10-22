@@ -495,3 +495,51 @@
   color: #666;
   margin: -1rem 0 1.5rem;
 }
+
+.toc-payouts h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 0.3rem;
+}
+
+.toc-payouts:not(:empty) {
+  margin-bottom: 2rem;
+}
+
+.toc-payout-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 0.75rem;
+}
+
+.toc-payout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 0.8rem 0.5rem;
+}
+
+.toc-payout:first-child {
+  border-color: #e85d26;
+  background: #fff7f2;
+}
+
+.toc-payout-place {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #e85d26;
+}
+
+.toc-payout-amt {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #1a1a1a;
+}
+
+.toc-payout-pct {
+  font-size: 0.75rem;
+  color: #999;
+}
