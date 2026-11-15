@@ -278,7 +278,7 @@ function showTab(id) {
 // ─── Supabase ───
 let sb;
 function getDB() {
-  if (!sb) sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  if (!sb) sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { db: { schema: DB_SCHEMA } });
   return sb;
 }
 
