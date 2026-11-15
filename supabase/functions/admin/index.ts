@@ -2,10 +2,10 @@
 // Proxies write operations from the admin page so the service_role key
 // stays server-side instead of exposed in the browser.
 //
-// Required environment secrets (set in Supabase dashboard):
-//   ADMIN_PASSWORD          - password the admin page must send
-//   PROJECT_URL             - https://eitveufhzgfrkrjmsuhd.supabase.co
-//   SERVICE_ROLE_KEY        - Supabase service_role key (NEVER ship to browser)
+// Lives in the shared "TCG-DMD Overall" project; poker tables are in the poker_league schema.
+//
+// Required secret: ADMIN_PASSWORD (password the admin page must send).
+// SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase automatically.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -38,11 +38,11 @@ Deno.serve(async (req) => {
     return json({ error: "Unauthorized" }, 401);
   }
 
-  const url = Deno.env.get("PROJECT_URL");
-  const key = Deno.env.get("SERVICE_ROLE_KEY");
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !key) return json({ error: "Server misconfigured" }, 500);
 
-  const sb = createClient(url, key, { auth: { persistSession: false } });
+  const sb = createClient(url, key, { auth: { persistSession: false }, db: { schema: "poker_league" } });
   const action = body.action;
   const p = body.payload ?? {};
 

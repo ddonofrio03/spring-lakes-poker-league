@@ -1,3 +1,5 @@
-const SUPABASE_URL = 'https://eitveufhzgfrkrjmsuhd.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpdHZldWZoemdmcmtyam1zdWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTY3OTAsImV4cCI6MjA5MTQ5Mjc5MH0.j-LeX88aT3CL3ShCZ7JemisLoBdv7ti1AgH7wwBG2P4';
+// Shared "TCG-DMD Overall" project; poker tables live in the poker_league schema.
+const SUPABASE_URL = 'https://utucjtnhdkewcgyvgvsj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_4OrSCnTMRaXai768QwAqeQ_U7w7CPuT';
+const DB_SCHEMA = 'poker_league';
 
