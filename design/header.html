@@ -8,6 +8,8 @@
   Usage: header.html?season=20&years=2008-2027&style=a
   Render to an image with headless Chrome (see design/README.md).
 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Rye&family=Limelight&family=Playfair+Display+SC:wght@900&family=Cinzel+Decorative:wght@900&display=block" rel="stylesheet">
 <style>
   html, body { margin: 0; padding: 0; background: #000; overflow: hidden; }
   canvas { display: block; }
@@ -19,13 +21,18 @@
 const params = new URLSearchParams(location.search);
 const SEASON = parseInt(params.get('season') || '20');
 const YEARS = params.get('years') || `2008–2027`;
-const STYLE = params.get('style') || 'c'; // c = Bodoni, chosen for Season 20
+const STYLE = params.get('style') || 'f'; // f = Limelight, chosen for Season 20
 
 // Font pairings: roman numeral / title
 const STYLES = {
   a: { roman: '900 330px "Rockwell"',        title: 'bold 96px "Copperplate"',      titleSpacing: 6,  lineGap: 108 },
   b: { roman: '330px "Impact"',              title: '98px "Herculanum"',            titleSpacing: 4,  lineGap: 110 },
   c: { roman: '900 330px "Arial Black"',     title: 'bold 104px "Bodoni 72 Smallcaps"', titleSpacing: 5, lineGap: 112 },
+  // Second round: Google fonts, chrome-and-glow title, sized to fit
+  d: { roman: '900 330px "Arial Black"', title: '900 100px "Cinzel"',             titleSpacing: 4, lineGap: 116, chrome: true },
+  e: { roman: '900 330px "Arial Black"', title: '100px "Rye"',                    titleSpacing: 3, lineGap: 118, chrome: true },
+  f: { roman: '900 330px "Arial Black"', title: '100px "Limelight"',              titleSpacing: 4, lineGap: 116, chrome: true },
+  g: { roman: '900 330px "Arial Black"', title: '900 100px "Playfair Display SC"', titleSpacing: 3, lineGap: 116, chrome: true },
 };
 const S = STYLES[STYLE] || STYLES.a;
 
@@ -216,61 +223,174 @@ function years(text, cx, y) {
 }
 
 function title(cx, y1, y2) {
+  const lines = ['SPRING LAKES', 'POKER LEAGUE'];
   ctx.save();
-  ctx.font = S.title;
   ctx.textAlign = 'center';
   ctx.letterSpacing = S.titleSpacing + 'px';
-  ctx.fillStyle = '#fff';
-  // soft white glow like the old header
-  ctx.shadowColor = 'rgba(255,255,255,0.75)';
-  ctx.shadowBlur = 18;
-  ctx.fillText('SPRING LAKES', cx, y1);
-  ctx.fillText('POKER LEAGUE', cx, y2);
-  ctx.shadowBlur = 0;
-  ctx.fillText('SPRING LAKES', cx, y1);
-  ctx.fillText('POKER LEAGUE', cx, y2);
+  // Shrink the font if the wider line would run past the chip area
+  let font = S.title;
+  ctx.font = font;
+  const maxW = 700;
+  const widest = Math.max(...lines.map(l => ctx.measureText(l).width));
+  if (widest > maxW) {
+    font = font.replace(/(\d+)px/, (m, px) => Math.floor(px * maxW / widest) + 'px');
+    ctx.font = font;
+  }
+  const ys = [y1, y2];
+
+  if (!S.chrome) {
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'rgba(255,255,255,0.75)';
+    ctx.shadowBlur = 18;
+    lines.forEach((l, i) => ctx.fillText(l, cx, ys[i]));
+    ctx.shadowBlur = 0;
+    lines.forEach((l, i) => ctx.fillText(l, cx, ys[i]));
+    ctx.restore();
+    return;
+  }
+
+  const size = parseInt(font.match(/(\d+)px/)[1]);
+  lines.forEach((l, i) => {
+    const y = ys[i];
+    // soft red halo behind, then white glow
+    ctx.shadowColor = 'rgba(230,30,40,0.55)';
+    ctx.shadowBlur = 40;
+    ctx.fillStyle = '#fff';
+    ctx.fillText(l, cx, y);
+    ctx.shadowColor = 'rgba(255,255,255,0.7)';
+    ctx.shadowBlur = 14;
+    ctx.fillText(l, cx, y);
+    ctx.shadowBlur = 0;
+    // chrome face: bright top, cool middle band, bright bottom edge
+    const g = ctx.createLinearGradient(0, y - size * 0.78, 0, y + size * 0.05);
+    g.addColorStop(0,    '#ffffff');
+    g.addColorStop(0.45, '#f4f4f6');
+    g.addColorStop(0.52, '#b9bcc4');
+    g.addColorStop(0.75, '#e9eaee');
+    g.addColorStop(1,    '#ffffff');
+    ctx.fillStyle = g;
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(40,0,0,0.55)';
+    ctx.strokeText(l, cx, y);
+    ctx.fillText(l, cx, y);
+  });
   ctx.restore();
 }
 
-// ─── SLPL chip badge ───
-function chipBadge(cx, cy, r) {
-  ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.8)';
-  ctx.shadowBlur = 20;
-  ctx.fillStyle = '#c4161c';
-  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
-  // edge inserts
+// ─── SLPL chip badge: tilted casino chip resting on a second chip ───
+function chipFace(g, r, opts) {
+  const { body, bodyDark, insert, ink } = opts;
+  // body with rim shading
+  const rg = g.createRadialGradient(-r * 0.3, -r * 0.35, r * 0.1, 0, 0, r);
+  rg.addColorStop(0, body);
+  rg.addColorStop(1, bodyDark);
+  g.fillStyle = rg;
+  g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill();
+  // edge inserts (rounded blocks)
   for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
-    ctx.save();
-    ctx.translate(cx, cy); ctx.rotate(a);
-    ctx.fillStyle = '#f3e6cc';
-    ctx.fillRect(r * 0.74, -r * 0.13, r * 0.26, r * 0.26);
-    ctx.restore();
+    g.save();
+    g.rotate((i / 8) * Math.PI * 2 + Math.PI / 8);
+    g.fillStyle = insert;
+    g.beginPath();
+    g.roundRect(r * 0.76, -r * 0.12, r * 0.22, r * 0.24, r * 0.03);
+    g.fill();
+    // little stripe inside each insert
+    g.fillStyle = bodyDark;
+    g.fillRect(r * 0.86, -r * 0.12, r * 0.025, r * 0.24);
+    g.restore();
   }
-  // inner ring
-  ctx.strokeStyle = '#f3e6cc';
-  ctx.lineWidth = r * 0.04;
-  ctx.setLineDash([r * 0.08, r * 0.05]);
-  ctx.beginPath(); ctx.arc(cx, cy, r * 0.66, 0, Math.PI * 2); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = '#f3e6cc';
-  ctx.beginPath(); ctx.arc(cx, cy, r * 0.58, 0, Math.PI * 2); ctx.fill();
+  // outer and inner rings
+  g.strokeStyle = 'rgba(0,0,0,0.35)';
+  g.lineWidth = r * 0.02;
+  g.beginPath(); g.arc(0, 0, r * 0.985, 0, Math.PI * 2); g.stroke();
+  g.strokeStyle = insert;
+  g.lineWidth = r * 0.025;
+  g.beginPath(); g.arc(0, 0, r * 0.72, 0, Math.PI * 2); g.stroke();
+  // inlay
+  const ig = g.createRadialGradient(-r * 0.15, -r * 0.2, r * 0.05, 0, 0, r * 0.66);
+  ig.addColorStop(0, '#fbf3df');
+  ig.addColorStop(1, '#e6d3a8');
+  g.fillStyle = ig;
+  g.beginPath(); g.arc(0, 0, r * 0.66, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = ink;
+  g.lineWidth = r * 0.018;
+  g.beginPath(); g.arc(0, 0, r * 0.62, 0, Math.PI * 2); g.stroke();
+}
+
+function ringText(g, text, r, size, color) {
+  g.save();
+  g.font = `700 ${size}px "Cinzel", "Apple Symbols"`;
+  g.fillStyle = color;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  const chars = [...text];
+  const step = (Math.PI * 2) / chars.length;
+  chars.forEach((ch, i) => {
+    g.save();
+    g.rotate(-Math.PI / 2 + i * step);
+    g.translate(r, 0);
+    g.rotate(Math.PI / 2);
+    g.fillText(ch, 0, 0);
+    g.restore();
+  });
+  g.restore();
+}
+
+function chipBadge(cx, cy, r) {
+  const red   = { body: '#e0242c', bodyDark: '#7a0b10', insert: '#f6ecd4', ink: '#8f0d12' };
+  const black = { body: '#3a3a3a', bodyDark: '#050505', insert: '#e8e8e8', ink: '#111' };
+
+  // chip underneath, peeking out down-left, slightly tilted
+  ctx.save();
+  ctx.translate(cx + r * 0.5, cy + r * 0.42);
+  ctx.rotate(0.6);
+  ctx.shadowColor = 'rgba(0,0,0,0.9)';
+  ctx.shadowBlur = 25;
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.92, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0;
+  chipFace(ctx, r * 0.92, black);
+  ctx.restore();
+
+  // main chip: edge thickness first, then the face
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(0.18);
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.95)';
+  ctx.shadowBlur = 28;
+  ctx.shadowOffsetX = -6;
+  ctx.shadowOffsetY = 10;
+  ctx.fillStyle = '#5c070b';
+  ctx.beginPath(); ctx.ellipse(0, r * 0.07, r, r, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  chipFace(ctx, r, red);
+
+  // center: suits, SLPL, season
   ctx.fillStyle = '#8f0d12';
-  ctx.beginPath(); ctx.arc(cx, cy, r * 0.5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#f3e6cc';
-  ctx.font = `bold ${r * 0.34}px "Rockwell"`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('SLPL', cx, cy + r * 0.02);
-  // suits around the ring
-  ctx.font = `${r * 0.13}px "Apple Symbols"`;
-  ['♠', '♥', '♣', '♦'].forEach((s, i) => {
-    const a = -Math.PI / 2 + i * Math.PI / 2;
-    ctx.fillStyle = i % 2 ? '#c4161c' : '#111';
-    ctx.fillText(s, cx + Math.cos(a) * r * 0.62, cy + Math.sin(a) * r * 0.62);
-  });
+  ctx.font = `900 ${r * 0.34}px "Cinzel"`;
+  const tg = ctx.createLinearGradient(0, -r * 0.15, 0, r * 0.15);
+  tg.addColorStop(0, '#f7d774');
+  tg.addColorStop(0.5, '#c8962c');
+  tg.addColorStop(1, '#8a5d12');
+  ctx.lineWidth = r * 0.03;
+  ctx.strokeStyle = '#5a0a0d';
+  ctx.strokeText('SLPL', 0, r * 0.02);
+  ctx.fillStyle = tg;
+  ctx.fillText('SLPL', 0, r * 0.02);
+  ringText(ctx, '\u2660 SPRING LAKES \u2665 EST. 2008 ', r * 0.515, r * 0.11, '#7a0b10');
+
+  // gloss
+  const gl = ctx.createLinearGradient(-r, -r, r * 0.4, r * 0.4);
+  gl.addColorStop(0, 'rgba(255,255,255,0.35)');
+  gl.addColorStop(0.45, 'rgba(255,255,255,0.06)');
+  gl.addColorStop(0.5, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gl;
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
 }
 
 async function render() {
@@ -278,13 +398,14 @@ async function render() {
     document.fonts.load(S.roman, 'XVI'),
     document.fonts.load(S.title, 'SPRING LAKES POKER LEAGUE'),
     document.fonts.load('bold 50px "DIN Condensed"', '0123456789'),
-    document.fonts.load('bold 40px "Rockwell"', 'SLPL'),
+    document.fonts.load('900 40px "Cinzel"', 'SLPL'),
+    document.fonts.load('700 20px "Cinzel"', 'SPRING'),
   ]);
   background();
   romanNumeral(toRoman(SEASON), 315, 322);
   years(YEARS, 315, 385);
-  title(1075, 160, 160 + S.lineGap);
-  chipBadge(1530, 352, 66);
+  title(1030, 165, 165 + S.lineGap);
+  chipBadge(1488, 292, 90);
   document.title = 'ready';
 }
 render();
