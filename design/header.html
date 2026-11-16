@@ -47,7 +47,12 @@ function toRoman(n) {
 let seed = 20;
 const rand = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 
-const W = 1600, H = 400;
+// The artwork is 1600x400; PAD extra pixels on each side (more chips on
+// the left, black on the right) let wide screens show more width instead
+// of cropping the top and bottom. Phones see just the middle 1600.
+const PAD = parseInt(params.get('pad') ?? '400');
+const W = 1600 + PAD * 2, H = 400;
+document.getElementById('c').width = W;
 const c = document.getElementById('c');
 const ctx = c.getContext('2d');
 
@@ -105,21 +110,21 @@ function background() {
 
   // Far stacks: small, dark, very soft
   layer(7, g => {
-    for (let x = -20; x < 900; x += 30 + rand() * 26) {
+    for (let x = -20; x < 900 + PAD; x += 30 + rand() * 26) {
       const w = 40 + rand() * 20, h = 11 + rand() * 3;
       drawStack(g, x, H * (0.55 + rand() * 0.45), w, h, 10 + Math.floor(rand() * 22), 0.7);
     }
   });
   // Middle stacks
   layer(3.5, g => {
-    for (let x = -30; x < 820; x += 52 + rand() * 40) {
+    for (let x = -30; x < 820 + PAD; x += 52 + rand() * 40) {
       const w = 62 + rand() * 26, h = 16 + rand() * 4;
       drawStack(g, x, H + 10 - rand() * 90, w, h, 10 + Math.floor(rand() * 16), 0.95);
     }
   });
   // Near stacks: big, bright, slightly soft
   layer(1.6, g => {
-    for (let x = -40; x < 700; x += 95 + rand() * 70) {
+    for (let x = -40; x < 700 + PAD; x += 95 + rand() * 70) {
       const w = 96 + rand() * 30, h = 24 + rand() * 4;
       drawStack(g, x, H + 40 - rand() * 50, w, h, 5 + Math.floor(rand() * 11), 1.1);
     }
@@ -128,20 +133,20 @@ function background() {
   // Sparkle: soft out-of-focus highlights
   layer(5, g => {
     for (let i = 0; i < 90; i++) {
-      const x = rand() * 760, y = rand() * H;
+      const x = rand() * (760 + PAD), y = rand() * H;
       g.fillStyle = rand() < 0.6 ? `rgba(255,${200 + rand() * 55},${190 + rand() * 60},${0.25 + rand() * 0.45})` : `rgba(255,40,40,${0.3 + rand() * 0.4})`;
       g.fillRect(x, y, 6 + rand() * 12, 4 + rand() * 8);
     }
   });
 
   // Warm bloom + fade to black under the title
-  const bloom = ctx.createRadialGradient(330, 220, 20, 330, 220, 420);
+  const bloom = ctx.createRadialGradient(330 + PAD, 220, 20, 330 + PAD, 220, 420);
   bloom.addColorStop(0, 'rgba(255,60,60,0.18)');
   bloom.addColorStop(1, 'rgba(255,0,0,0)');
   ctx.fillStyle = bloom;
   ctx.fillRect(0, 0, W, H);
 
-  const fade = ctx.createLinearGradient(440, 0, 900, 0);
+  const fade = ctx.createLinearGradient(440 + PAD, 0, 900 + PAD, 0);
   fade.addColorStop(0, 'rgba(0,0,0,0)');
   fade.addColorStop(0.55, 'rgba(0,0,0,0.85)');
   fade.addColorStop(1, 'rgba(0,0,0,1)');
@@ -402,10 +407,10 @@ async function render() {
     document.fonts.load('700 20px "Cinzel"', 'SPRING'),
   ]);
   background();
-  romanNumeral(toRoman(SEASON), 315, 322);
-  years(YEARS, 315, 385);
-  title(1030, 165, 165 + S.lineGap);
-  chipBadge(1488, 292, 90);
+  romanNumeral(toRoman(SEASON), 315 + PAD, 322);
+  years(YEARS, 315 + PAD, 385);
+  title(1030 + PAD, 165, 165 + S.lineGap);
+  chipBadge(1488 + PAD, 292, 90);
   document.title = 'ready';
 }
 render();

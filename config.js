@@ -19,7 +19,7 @@ const FIRST_ARCHIVED_SEASON = 19;
 // that season's TOC sign-ups open.
 const SEASON_INFO = {
   19: { roman: 'XIX', year: 2026, header: 'header.jpeg',    tocTab: true },
-  20: { roman: 'XX',  year: 2027, header: 'header-s20.jpg', tocTab: false },
+  20: { roman: 'XX',  year: 2027, header: 'header-s20.jpg?v=2', tocTab: false },
 };
 const SEASON_META = SEASON_INFO[SITE_SEASON] || { roman: String(SITE_SEASON), year: 2007 + SITE_SEASON, header: 'header.jpeg', tocTab: false };
 

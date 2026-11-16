@@ -86,12 +86,17 @@ a:hover { text-decoration: underline; }
 .hero-banner {
   width: 100%;
   overflow: hidden;
-  max-height: 380px;
   background: #0a0a0a;
 }
 
+/* The banner is 4:1 up to 400px tall. Past that (wide screens) it stays
+   400px tall and the image is trimmed at the sides, never top/bottom.
+   Headers made wider than 4:1 (header-s20.jpg is 6:1) show extra edge
+   on wide screens and their full center everywhere else. */
 .hero-img {
   width: 100%;
+  aspect-ratio: 4 / 1;
+  max-height: 400px;
   display: block;
   object-fit: cover;
   object-position: center;
