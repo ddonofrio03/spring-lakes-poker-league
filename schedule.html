@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Schedule – Spring Lakes Poker League</title>
-<link rel="stylesheet" href="style.css?v=20261116b">
+<link rel="stylesheet" href="style.css?v=20261116c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=20261116b"></script>
-<script src="supabase.js?v=20261116b"></script>
+<script src="config.js?v=20261116c"></script>
+<script src="supabase.js?v=20261116c"></script>
 </head>
 <body>
 
@@ -70,16 +70,16 @@ async function loadSchedule() {
     return;
   }
 
-  let html = '<table class="results-table" style="max-width:700px">';
+  let html = '<table class="results-table schedule-table">';
   html += `
     <thead>
       <tr>
         <th>Event</th>
         <th>Date</th>
         <th>Game</th>
-        <th>Location</th>
+        <th class="col-loc">Location</th>
         <th>Winner</th>
-        <th>Players</th>
+        <th class="col-players">Players</th>
       </tr>
     </thead>
     <tbody>
@@ -89,7 +89,9 @@ async function loadSchedule() {
     const isPast = s.event_date < today;
     const cancelled = !!s.cancelled;
     const d = new Date(s.event_date + 'T12:00:00');
-    const dateStr = d.toLocaleString('en-US', {weekday:'short', month:'long', day:'numeric', year:'numeric'});
+    // Full month on wider screens, short month on phones
+    const dateStr = `<span class="d-long">${d.toLocaleString('en-US', {month:'long', day:'numeric'})}</span>` +
+                    `<span class="d-short">${d.toLocaleString('en-US', {month:'short', day:'numeric'})}</span>`;
     const label = s.is_toc ? 'TOC' : `Event ${s.event_number}`;
 
     // Find matching event results
@@ -119,11 +121,11 @@ async function loadSchedule() {
     html += `
       <tr style="${rowStyle}">
         <td>${label}${cancelledTag}${s.notes ? `<br><small style="color:#aaa;font-weight:400;text-decoration:none">${s.notes}</small>` : ''}</td>
-        <td>${dateStr}</td>
+        <td class="sched-date">${dateStr}</td>
         <td>${s.game_type}</td>
-        <td>${s.location}</td>
+        <td class="col-loc">${s.location}</td>
         <td>${winnerCell}</td>
-        <td style="text-align:center;text-decoration:none">${playerCount || ''}</td>
+        <td class="col-players" style="text-align:center;text-decoration:none">${playerCount || ''}</td>
       </tr>
     `;
   });

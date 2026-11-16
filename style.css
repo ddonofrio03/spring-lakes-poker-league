@@ -859,3 +859,15 @@ input:focus, select:focus, textarea:focus {
 .archive-event-name { font-weight: 700; }
 .archive-event-meta { font-size: 0.85rem; color: #888; }
 .archive-event .results-table { margin: 0; }
+
+/* ─── Schedule page table ─── */
+.schedule-table { max-width: 920px; margin-left: auto; margin-right: auto; }
+.schedule-table .sched-date { white-space: nowrap; }
+.schedule-table .d-short { display: none; }
+@media (max-width: 640px) {
+  .schedule-table { font-size: 0.9rem; }
+  .schedule-table th, .schedule-table td { padding-left: 0.5rem; padding-right: 0.5rem; }
+  .schedule-table .col-loc, .schedule-table .col-players { display: none; }
+  .schedule-table .d-long { display: none; }
+  .schedule-table .d-short { display: inline; }
+}
