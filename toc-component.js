@@ -52,13 +52,13 @@ const TOC = {
   async loadStandings(db) {
     const { data: results, error } = await db
       .from('results')
-      .select('points, is_winner, players(name), events!inner(season)')
+      .select('points, is_winner, players(name), events!inner(season, game_type)')
       .eq('events.season', this.SEASON);
     if (error) throw error;
 
     const map = {};
     (results || []).forEach(r => {
-      if (!r.players) return;
+      if (!r.players || r.events.game_type === 'TOC') return;
       const name = r.players.name;
       const p = map[name] || (map[name] = { name, events: 0, wins: 0, points: 0 });
       p.events++;

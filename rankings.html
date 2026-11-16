@@ -43,7 +43,7 @@
 </div>
 
 <footer class="site-footer">
-  <p>Spring Lakes Poker League &copy; 2008&ndash;2026 &nbsp;|&nbsp; Season XIX</p>
+  <p>Spring Lakes Poker League &copy; <span data-season-years>2008&ndash;2026</span> &nbsp;|&nbsp; Season <span data-season-roman>XIX</span></p>
 </footer>
 
 <script>
@@ -54,14 +54,14 @@ async function loadRankings() {
   const { data: events } = await db
     .from('events')
     .select('id, event_number, event_name, player_count')
-    .eq('season', 19)
+    .eq('season', SITE_SEASON)
     .order('event_number');
 
   // Load all results with player names
   const { data: results } = await db
     .from('results')
-    .select('*, events(event_number, player_count), players(name)')
-    .eq('events.season', 19);
+    .select('*, events!inner(event_number, player_count, game_type), players(name)')
+    .eq('events.season', SITE_SEASON);
 
   const wrap = document.getElementById('rankings-wrap');
 
@@ -74,7 +74,7 @@ async function loadRankings() {
   const playerMap = {};
 
   results.forEach(r => {
-    if (!r.players) return;
+    if (!r.players || r.events?.game_type === 'TOC') return; // TOC doesn't count toward season points
     const name = r.players.name;
     if (!playerMap[name]) {
       playerMap[name] = {

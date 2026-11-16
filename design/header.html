@@ -1,0 +1,293 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>SLPL Header Generator</title>
+<!--
+  Draws the site header (1600x400) on a canvas.
+  Usage: header.html?season=20&years=2008-2027&style=a
+  Render to an image with headless Chrome (see design/README.md).
+-->
+<style>
+  html, body { margin: 0; padding: 0; background: #000; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1600" height="400"></canvas>
+<script>
+const params = new URLSearchParams(location.search);
+const SEASON = parseInt(params.get('season') || '20');
+const YEARS = params.get('years') || `2008–2027`;
+const STYLE = params.get('style') || 'c'; // c = Bodoni, chosen for Season 20
+
+// Font pairings: roman numeral / title
+const STYLES = {
+  a: { roman: '900 330px "Rockwell"',        title: 'bold 96px "Copperplate"',      titleSpacing: 6,  lineGap: 108 },
+  b: { roman: '330px "Impact"',              title: '98px "Herculanum"',            titleSpacing: 4,  lineGap: 110 },
+  c: { roman: '900 330px "Arial Black"',     title: 'bold 104px "Bodoni 72 Smallcaps"', titleSpacing: 5, lineGap: 112 },
+};
+const S = STYLES[STYLE] || STYLES.a;
+
+function toRoman(n) {
+  const map = [[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];
+  let out = '';
+  for (const [v, r] of map) while (n >= v) { out += r; n -= v; }
+  return out;
+}
+
+// Small seeded RNG so the image comes out the same every time
+let seed = 20;
+const rand = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+
+const W = 1600, H = 400;
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+
+// ─── Red chip stacks (blurred, like the old header) ───
+function drawChip(g, x, y, w, h, turn, light) {
+  // Cylinder shading: dark edges, bright middle
+  const grad = g.createLinearGradient(x, 0, x + w, 0);
+  grad.addColorStop(0,    `hsl(356, 85%, ${12 * light}%)`);
+  grad.addColorStop(0.35, `hsl(356, 90%, ${42 * light}%)`);
+  grad.addColorStop(0.55, `hsl(358, 95%, ${55 * light}%)`);
+  grad.addColorStop(1,    `hsl(354, 85%, ${10 * light}%)`);
+  g.fillStyle = grad;
+  g.beginPath();
+  g.roundRect(x, y, w, h, h * 0.35);
+  g.fill();
+  // White edge spots wrapping around the chip
+  const spots = 8;
+  for (let i = 0; i < spots; i++) {
+    const a = turn + (i / spots) * Math.PI * 2;
+    if (Math.cos(a) < 0.1) continue; // back side, hidden
+    const cx = x + w / 2 + Math.sin(a) * w / 2 * 0.92;
+    const sw = w * 0.11 * Math.cos(a);
+    const lum = 70 + 30 * Math.cos(a);
+    g.fillStyle = `hsla(20, 30%, ${lum * light}%, ${0.95})`;
+    g.fillRect(cx - sw / 2, y + h * 0.18, sw, h * 0.64);
+  }
+  // Thin dark seam between chips
+  g.fillStyle = 'rgba(0,0,0,0.55)';
+  g.fillRect(x + 2, y + h - 1.5, w - 4, 1.5);
+}
+
+function drawStack(g, x, baseY, w, h, count, light) {
+  let turn = rand() * Math.PI * 2;
+  for (let i = 0; i < count; i++) {
+    const jitter = (rand() - 0.5) * w * 0.06;
+    turn += 0.6 + rand() * 0.9;
+    drawChip(g, x + jitter, baseY - (i + 1) * h, w, h, turn, light);
+  }
+}
+
+function layer(blur, fn) {
+  const off = document.createElement('canvas');
+  off.width = W; off.height = H;
+  const g = off.getContext('2d');
+  fn(g);
+  ctx.save();
+  ctx.filter = `blur(${blur}px)`;
+  ctx.drawImage(off, 0, 0);
+  ctx.restore();
+}
+
+function background() {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+
+  // Far stacks: small, dark, very soft
+  layer(7, g => {
+    for (let x = -20; x < 900; x += 30 + rand() * 26) {
+      const w = 40 + rand() * 20, h = 11 + rand() * 3;
+      drawStack(g, x, H * (0.55 + rand() * 0.45), w, h, 10 + Math.floor(rand() * 22), 0.7);
+    }
+  });
+  // Middle stacks
+  layer(3.5, g => {
+    for (let x = -30; x < 820; x += 52 + rand() * 40) {
+      const w = 62 + rand() * 26, h = 16 + rand() * 4;
+      drawStack(g, x, H + 10 - rand() * 90, w, h, 10 + Math.floor(rand() * 16), 0.95);
+    }
+  });
+  // Near stacks: big, bright, slightly soft
+  layer(1.6, g => {
+    for (let x = -40; x < 700; x += 95 + rand() * 70) {
+      const w = 96 + rand() * 30, h = 24 + rand() * 4;
+      drawStack(g, x, H + 40 - rand() * 50, w, h, 5 + Math.floor(rand() * 11), 1.1);
+    }
+  });
+
+  // Sparkle: soft out-of-focus highlights
+  layer(5, g => {
+    for (let i = 0; i < 90; i++) {
+      const x = rand() * 760, y = rand() * H;
+      g.fillStyle = rand() < 0.6 ? `rgba(255,${200 + rand() * 55},${190 + rand() * 60},${0.25 + rand() * 0.45})` : `rgba(255,40,40,${0.3 + rand() * 0.4})`;
+      g.fillRect(x, y, 6 + rand() * 12, 4 + rand() * 8);
+    }
+  });
+
+  // Warm bloom + fade to black under the title
+  const bloom = ctx.createRadialGradient(330, 220, 20, 330, 220, 420);
+  bloom.addColorStop(0, 'rgba(255,60,60,0.18)');
+  bloom.addColorStop(1, 'rgba(255,0,0,0)');
+  ctx.fillStyle = bloom;
+  ctx.fillRect(0, 0, W, H);
+
+  const fade = ctx.createLinearGradient(440, 0, 900, 0);
+  fade.addColorStop(0, 'rgba(0,0,0,0)');
+  fade.addColorStop(0.55, 'rgba(0,0,0,0.85)');
+  fade.addColorStop(1, 'rgba(0,0,0,1)');
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, 0, W, H);
+
+  // Vignette top and bottom
+  const v = ctx.createLinearGradient(0, 0, 0, H);
+  v.addColorStop(0, 'rgba(0,0,0,0.45)');
+  v.addColorStop(0.25, 'rgba(0,0,0,0)');
+  v.addColorStop(0.8, 'rgba(0,0,0,0)');
+  v.addColorStop(1, 'rgba(0,0,0,0.5)');
+  ctx.fillStyle = v;
+  ctx.fillRect(0, 0, W, H);
+}
+
+// ─── Distressed roman numeral: black letters, white edge, white specks ───
+function romanNumeral(text, cx, baseline) {
+  const off = document.createElement('canvas');
+  off.width = W; off.height = H;
+  const g = off.getContext('2d');
+  g.font = S.roman;
+  g.textAlign = 'center';
+  g.textBaseline = 'alphabetic';
+  // condense the letters a little so XX keeps the old block shape
+  g.save();
+  g.translate(cx, baseline);
+  g.scale(0.92, 1);
+  g.lineJoin = 'miter';
+  g.lineWidth = 9;
+  g.strokeStyle = '#fff';
+  g.strokeText(text, 0, 0);
+  g.fillStyle = '#060606';
+  g.fillText(text, 0, 0);
+  g.restore();
+
+  // Specks only where the letters are
+  g.globalCompositeOperation = 'source-atop';
+  for (let i = 0; i < 1400; i++) {
+    const x = cx - 300 + rand() * 600, y = baseline - 280 + rand() * 300;
+    const r = 0.8 + Math.pow(rand(), 3) * 6;
+    g.fillStyle = `rgba(255,255,255,${0.55 + rand() * 0.45})`;
+    g.beginPath();
+    const pts = 5 + Math.floor(rand() * 3);
+    for (let k = 0; k < pts; k++) {
+      const a = (k / pts) * Math.PI * 2, rr = r * (0.5 + rand());
+      k ? g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr) : g.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+    }
+    g.fill();
+  }
+  // Chewed-up edges: knock out a few bites along the outline
+  g.globalCompositeOperation = 'destination-out';
+  for (let i = 0; i < 260; i++) {
+    const x = cx - 300 + rand() * 600, y = baseline - 280 + rand() * 300;
+    g.beginPath();
+    g.arc(x, y, 0.6 + rand() * 2.2, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.9)';
+  ctx.shadowBlur = 24;
+  ctx.drawImage(off, 0, 0);
+  ctx.restore();
+}
+
+function years(text, cx, y) {
+  ctx.save();
+  ctx.font = 'bold 50px "DIN Condensed"';
+  ctx.textAlign = 'center';
+  ctx.letterSpacing = '3px';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = '#fff';
+  ctx.strokeText(text, cx, y);
+  ctx.fillStyle = '#000';
+  ctx.fillText(text, cx, y);
+  ctx.restore();
+}
+
+function title(cx, y1, y2) {
+  ctx.save();
+  ctx.font = S.title;
+  ctx.textAlign = 'center';
+  ctx.letterSpacing = S.titleSpacing + 'px';
+  ctx.fillStyle = '#fff';
+  // soft white glow like the old header
+  ctx.shadowColor = 'rgba(255,255,255,0.75)';
+  ctx.shadowBlur = 18;
+  ctx.fillText('SPRING LAKES', cx, y1);
+  ctx.fillText('POKER LEAGUE', cx, y2);
+  ctx.shadowBlur = 0;
+  ctx.fillText('SPRING LAKES', cx, y1);
+  ctx.fillText('POKER LEAGUE', cx, y2);
+  ctx.restore();
+}
+
+// ─── SLPL chip badge ───
+function chipBadge(cx, cy, r) {
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.8)';
+  ctx.shadowBlur = 20;
+  ctx.fillStyle = '#c4161c';
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  // edge inserts
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+    ctx.save();
+    ctx.translate(cx, cy); ctx.rotate(a);
+    ctx.fillStyle = '#f3e6cc';
+    ctx.fillRect(r * 0.74, -r * 0.13, r * 0.26, r * 0.26);
+    ctx.restore();
+  }
+  // inner ring
+  ctx.strokeStyle = '#f3e6cc';
+  ctx.lineWidth = r * 0.04;
+  ctx.setLineDash([r * 0.08, r * 0.05]);
+  ctx.beginPath(); ctx.arc(cx, cy, r * 0.66, 0, Math.PI * 2); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#f3e6cc';
+  ctx.beginPath(); ctx.arc(cx, cy, r * 0.58, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#8f0d12';
+  ctx.beginPath(); ctx.arc(cx, cy, r * 0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#f3e6cc';
+  ctx.font = `bold ${r * 0.34}px "Rockwell"`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('SLPL', cx, cy + r * 0.02);
+  // suits around the ring
+  ctx.font = `${r * 0.13}px "Apple Symbols"`;
+  ['♠', '♥', '♣', '♦'].forEach((s, i) => {
+    const a = -Math.PI / 2 + i * Math.PI / 2;
+    ctx.fillStyle = i % 2 ? '#c4161c' : '#111';
+    ctx.fillText(s, cx + Math.cos(a) * r * 0.62, cy + Math.sin(a) * r * 0.62);
+  });
+}
+
+async function render() {
+  await Promise.all([
+    document.fonts.load(S.roman, 'XVI'),
+    document.fonts.load(S.title, 'SPRING LAKES POKER LEAGUE'),
+    document.fonts.load('bold 50px "DIN Condensed"', '0123456789'),
+    document.fonts.load('bold 40px "Rockwell"', 'SLPL'),
+  ]);
+  background();
+  romanNumeral(toRoman(SEASON), 315, 322);
+  years(YEARS, 315, 385);
+  title(1075, 160, 160 + S.lineGap);
+  chipBadge(1530, 352, 66);
+  document.title = 'ready';
+}
+render();
+</script>
+</body>
+</html>

@@ -32,7 +32,7 @@
 <div class="page-body full-width">
   <main class="main-content">
 
-    <h1 class="page-heading">SEASON XIX SCHEDULE</h1>
+    <h1 class="page-heading">SEASON <span data-season-roman>XIX</span> SCHEDULE</h1>
     <div class="page-heading-divider"></div>
 
     <div id="schedule-wrap">
@@ -43,7 +43,7 @@
 </div>
 
 <footer class="site-footer">
-  <p>Spring Lakes Poker League &copy; 2008&ndash;2026 &nbsp;|&nbsp; Season XIX</p>
+  <p>Spring Lakes Poker League &copy; <span data-season-years>2008&ndash;2026</span> &nbsp;|&nbsp; Season <span data-season-roman>XIX</span></p>
 </footer>
 
 <script>
@@ -54,14 +54,14 @@ async function loadSchedule() {
   const { data: sched } = await db
     .from('schedule')
     .select('*')
-    .eq('season', 19)
+    .eq('season', SITE_SEASON)
     .order('event_date');
 
   // Load finished events to show results
   const { data: events } = await db
     .from('events')
-    .select('event_number, player_count, results(finish_position, is_winner, points, players(name))')
-    .eq('season', 19);
+    .select('event_number, game_type, player_count, results(finish_position, is_winner, points, players(name))')
+    .eq('season', SITE_SEASON);
 
   const wrap = document.getElementById('schedule-wrap');
 
@@ -93,7 +93,7 @@ async function loadSchedule() {
     const label = s.is_toc ? 'TOC' : `Event ${s.event_number}`;
 
     // Find matching event results
-    const ev = events && events.find(e => e.event_number === s.event_number);
+    const ev = events && events.find(e => s.is_toc ? e.game_type === 'TOC' : e.event_number === s.event_number && e.game_type !== 'TOC');
     let winner = '';
     let playerCount = '';
 

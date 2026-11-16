@@ -25,7 +25,7 @@ const ACTIVE_EVENT = {
       const { data: upcoming, error } = await db
         .from('schedule')
         .select('*')
-        .eq('season', 19)
+        .eq('season', SITE_SEASON)
         .or('cancelled.is.null,cancelled.eq.false')
         .gte('event_date', today)
         .order('event_date', { ascending: true })
@@ -51,7 +51,7 @@ const ACTIVE_EVENT = {
         const { data: pastEvents } = await db
           .from('events')
           .select('*')
-          .eq('season', 19)
+          .eq('season', SITE_SEASON)
           .order('event_number', { ascending: false })
           .limit(1);
 
@@ -79,7 +79,7 @@ const ACTIVE_EVENT = {
         <div class="active-event-header">
           <div class="active-event-title">
             <span class="event-label">UPCOMING</span>
-            <h2>E${event.event_number} ${event.event_name}</h2>
+            <h2>${event.game_type === 'TOC' ? event.event_name : `E${event.event_number} ${event.event_name}`}</h2>
           <p class="event-meta">
               ${etDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} 
               <span class="bullet">•</span> 
@@ -295,7 +295,7 @@ const ACTIVE_EVENT = {
         <tr class="${i === 0 ? 'winner' : ''}">
           <td class="finish">${r.finish_position}</td>
           <td class="name">${r.players.name}</td>
-          <td class="points">${r.points}</td>
+          <td class="points">${event.game_type === 'TOC' ? '' : r.points}</td>
           <td class="payout">${r.payout ? '$' + r.payout : ''}</td>
         </tr>
       `)
@@ -343,6 +343,10 @@ const ACTIVE_EVENT = {
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (typeof PREVIEW_SEASON !== 'undefined' && PREVIEW_SEASON) {
+        alert('This is a preview of an unpublished season. RSVPs are off.');
+        return;
+      }
 
       // Get name from either dropdown or text input
       let name = '';

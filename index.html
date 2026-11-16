@@ -64,8 +64,8 @@
 </div>
 
 <footer class="site-footer">
-  <p>Spring Lakes Poker League &copy; 2008&ndash;2026 &nbsp;|&nbsp;
-     Season XIX &nbsp;|&nbsp;
+  <p>Spring Lakes Poker League &copy; <span data-season-years>2008&ndash;2026</span> &nbsp;|&nbsp;
+     Season <span data-season-roman>XIX</span> &nbsp;|&nbsp;
      <a href="admin/index.html">Admin</a>
   </p>
 </footer>
@@ -95,7 +95,7 @@ async function loadHome() {
   const { data: sched } = await db
     .from('schedule')
     .select('*')
-    .eq('season', 19)
+    .eq('season', SITE_SEASON)
     .order('event_date');
 
   const today = new Date().toISOString().slice(0,10);
@@ -142,7 +142,7 @@ async function loadHome() {
   const { data: events } = await db
     .from('events')
     .select('*, results(*, players(name))')
-    .eq('season', 19)
+    .eq('season', SITE_SEASON)
     .order('event_number', {ascending: false});
 
   const latestWrap = document.getElementById('latest-event-wrap');
@@ -172,7 +172,7 @@ async function loadHome() {
         html += `<tr class="${r.finish_position <= 3 ? 'money' : ''}">
           <td>${r.finish_position}</td>
           <td>${medal}${r.players.name}</td>
-          <td>${r.points}</td>
+          <td>${ev.game_type === 'TOC' ? '' : r.points}</td>
           <td>${r.payout > 0 ? '$' + r.payout.toFixed(0) : ''}</td>
         </tr>`;
       });

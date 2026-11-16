@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Past Seasons – Spring Lakes Poker League</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="supabase.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="index.html" class="site-title">SPRING LAKES POKER LEAGUE</a>
+    <nav class="site-nav">
+      <a href="index.html" class="nav-link">HOME</a>
+      <a href="toc.html" class="nav-link">TOC</a>
+      <a href="schedule.html" class="nav-link">SCHEDULE</a>
+      <a href="rankings.html" class="nav-link">SEASON RANKINGS</a>
+      <a href="rules.html" class="nav-link">RULES &amp; STRUCTURE</a>
+    </nav>
+    <button class="nav-toggle" onclick="toggleNav()">&#9776;</button>
+  </div>
+</header>
+
+<div class="hero-banner">
+  <img src="header.jpeg" alt="Spring Lakes Poker League" class="hero-img">
+</div>
+
+<div class="page-body full-width">
+  <main class="main-content">
+
+    <h1 class="page-heading">PAST SEASONS</h1>
+    <div class="page-heading-divider"></div>
+
+    <div id="season-tabs" class="season-tabs"></div>
+    <div id="archive-wrap">
+      <div class="loading-msg">Loading past seasons...</div>
+    </div>
+
+  </main>
+</div>
+
+<footer class="site-footer">
+  <p>Spring Lakes Poker League &copy; <span data-season-years>2008&ndash;2026</span> &nbsp;|&nbsp; Season <span data-season-roman>XIX</span></p>
+</footer>
+
+<script>
+// Every season before the one the site is showing. Results stay in the
+// database; this page just reads them back.
+const roman = n => [[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']]
+  .reduce((out, [v, r]) => { while (n >= v) { out += r; n -= v; } return out; }, '');
+const money = n => n > 0 ? '$' + Number(n).toLocaleString('en-US', { maximumFractionDigits: 0 }) : '';
+const fmtDate = d => new Date(d + 'T12:00:00')
+  .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+async function loadSeasonList() {
+  const { data } = await getSupabase()
+    .from('events').select('season').lt('season', SITE_SEASON);
+  const seasons = [...new Set((data || []).map(e => e.season))].sort((a, b) => b - a);
+  const wrap = document.getElementById('archive-wrap');
+  if (!seasons.length) {
+    wrap.innerHTML = '<p class="muted" style="text-align:center;padding:2rem">No past seasons yet.</p>';
+    return;
+  }
+  const want = parseInt(new URLSearchParams(location.search).get('season'));
+  const tabs = document.getElementById('season-tabs');
+  if (seasons.length > 1) {
+    tabs.innerHTML = seasons.map(s =>
+      `<button class="season-tab" data-season="${s}" onclick="loadSeason(${s})">Season ${roman(s)}</button>`
+    ).join('');
+  }
+  loadSeason(seasons.includes(want) ? want : seasons[0]);
+}
+
+async function loadSeason(season) {
+  document.querySelectorAll('.season-tab').forEach(b =>
+    b.classList.toggle('active', parseInt(b.dataset.season) === season));
+  const wrap = document.getElementById('archive-wrap');
+  wrap.innerHTML = '<div class="loading-msg">Loading...</div>';
+
+  const { data: events } = await getSupabase()
+    .from('events')
+    .select('event_number, event_name, game_type, event_date, player_count, results(finish_position, points, payout, is_winner, players(name))')
+    .eq('season', season)
+    .order('event_number');
+
+  if (!events || !events.length) {
+    wrap.innerHTML = '<p class="muted">No results for this season.</p>';
+    return;
+  }
+
+  const toc = events.find(e => e.game_type === 'TOC');
+  const league = events.filter(e => e.game_type !== 'TOC');
+
+  // Final standings: league events only (the TOC never counts for points)
+  const map = {};
+  const player = name => map[name] || (map[name] = { name, events: 0, wins: 0, points: 0, winnings: 0 });
+  league.forEach(ev => ev.results.forEach(r => {
+    if (!r.players) return;
+    const p = player(r.players.name);
+    p.events++;
+    p.points += r.points;
+    if (r.is_winner) p.wins++;
+    p.winnings += Number(r.payout) || 0;
+  }));
+  // TOC money still counts toward a player's season winnings
+  if (toc) toc.results.forEach(r => { if (r.players) player(r.players.name).winnings += Number(r.payout) || 0; });
+
+  const standings = Object.values(map).filter(p => p.events > 0)
+    .sort((a, b) => b.points - a.points || b.wins - a.wins);
+  standings.forEach((p, i) => {
+    p.rank = i > 0 && standings[i - 1].points === p.points ? standings[i - 1].rank : i + 1;
+  });
+
+  const tocWinner = toc && toc.results.find(r => r.finish_position === 1)?.players?.name;
+  const leader = standings[0];
+  const topWins = Math.max(0, ...standings.map(p => p.wins));
+  const winLeaders = standings.filter(p => p.wins === topWins);
+  const mostWins = topWins ? {
+    name: winLeaders.length <= 2 ? winLeaders.map(p => p.name).join(' & ') : `${winLeaders.length}-way tie`,
+    wins: topWins,
+  } : null;
+  const year = league[0]?.event_date.slice(0, 4) || '';
+
+  let html = `
+    <h2 class="archive-title">Season ${roman(season)} &middot; ${year}</h2>
+    <div class="archive-highlights">
+      <div class="archive-stat">
+        <span class="archive-label">TOC Champion</span>
+        <span class="archive-value">${tocWinner || '&mdash;'}</span>
+        ${toc ? `<span class="archive-sub">${fmtDate(toc.event_date)} &middot; ${toc.player_count} players</span>` : ''}
+      </div>
+      <div class="archive-stat">
+        <span class="archive-label">Points Leader</span>
+        <span class="archive-value">${leader ? leader.name : '&mdash;'}</span>
+        ${leader ? `<span class="archive-sub">${leader.points} points</span>` : ''}
+      </div>
+      <div class="archive-stat">
+        <span class="archive-label">Most Wins</span>
+        <span class="archive-value">${mostWins && mostWins.wins ? mostWins.name : '&mdash;'}</span>
+        ${mostWins && mostWins.wins ? `<span class="archive-sub">${mostWins.wins} win${mostWins.wins > 1 ? 's' : ''}</span>` : ''}
+      </div>
+      <div class="archive-stat">
+        <span class="archive-label">Events</span>
+        <span class="archive-value">${league.length}${toc ? ' + TOC' : ''}</span>
+        <span class="archive-sub">${standings.length} players</span>
+      </div>
+    </div>
+
+    <h3 class="archive-section">FINAL STANDINGS</h3>
+    <div style="overflow-x:auto">
+    <table class="rankings-table">
+      <thead><tr><th>#</th><th>Name</th><th>Evts</th><th>W</th><th>Points</th><th>Winnings</th></tr></thead>
+      <tbody>`;
+  standings.forEach(p => {
+    const cls = p.rank === 1 ? 'rank-1' : p.rank <= 3 ? 'rank-2' : '';
+    html += `<tr class="${cls}">
+      <td class="rank-num">${p.rank}</td>
+      <td>${p.name}${p.name === tocWinner ? ' <span class="toc-badge">TOC CHAMP</span>' : ''}</td>
+      <td>${p.events}</td>
+      <td>${p.wins || ''}</td>
+      <td class="total-pts">${p.points}</td>
+      <td>${money(p.winnings)}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>
+    <p style="margin-top:0.6rem;font-size:0.82rem;color:#888">Points are from league events only. Winnings include the TOC.</p>
+
+    <h3 class="archive-section">EVENT RESULTS</h3>`;
+
+  // TOC first, then events newest to oldest
+  const ordered = [...(toc ? [toc] : []), ...[...league].reverse()];
+  ordered.forEach((ev, i) => {
+    const isTOC = ev.game_type === 'TOC';
+    const results = [...ev.results].sort((a, b) => a.finish_position - b.finish_position);
+    const winner = results[0]?.players?.name || '';
+    html += `
+      <details class="archive-event"${i === 0 ? ' open' : ''}>
+        <summary>
+          <span class="archive-event-name">${isTOC ? 'Tournament of Champions' : `Event ${ev.event_number} &middot; ${ev.game_type}`}</span>
+          <span class="archive-event-meta">${fmtDate(ev.event_date)} &middot; ${ev.player_count} players${winner ? ` &middot; won by <strong>${winner}</strong>` : ''}</span>
+        </summary>
+        <table class="results-table">
+          <thead><tr><th>Place</th><th>Player</th>${isTOC ? '' : '<th>Points</th>'}<th>Payout</th></tr></thead>
+          <tbody>
+          ${results.map(r => `<tr class="${r.payout > 0 ? 'money' : ''}">
+            <td>${r.finish_position}</td>
+            <td>${r.players?.name || ''}</td>
+            ${isTOC ? '' : `<td>${r.points}</td>`}
+            <td>${money(r.payout)}</td>
+          </tr>`).join('')}
+          </tbody>
+        </table>
+      </details>`;
+  });
+
+  wrap.innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', loadSeasonList);
+</script>
+</body>
+</html>

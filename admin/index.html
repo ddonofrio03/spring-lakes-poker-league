@@ -49,6 +49,22 @@
     <!-- ═══ TAB: ENTER RESULTS ═══ -->
     <div id="tab-event" class="admin-tab">
 
+      <!-- CSV Import -->
+      <div class="admin-card">
+        <h2>UPLOAD BLINDVALET CSV</h2>
+        <p style="font-size:0.9rem;color:#666;margin-bottom:1rem">
+          Drop in the CSV BlindValet saves after the tournament (e.g. <code>SLPLS19E10_17102026.csv</code>).
+          The event number comes from the file name; the date, game, finish order, player count
+          and payouts all fill in. Check the preview, then click <strong>Save Event Results</strong>.
+        </p>
+        <label class="csv-drop" id="csv-drop">
+          <input type="file" id="csv-file" accept=".csv,text/csv" onchange="handleCSVFile(this.files[0])">
+          <span class="csv-drop-text"><strong>Choose CSV file</strong> or drag it here</span>
+          <span class="csv-drop-file" id="csv-file-name"></span>
+        </label>
+        <div id="name-fix" style="display:none"></div>
+      </div>
+
       <div class="admin-card">
         <h2>ENTER EVENT RESULTS</h2>
 
@@ -67,6 +83,7 @@
               <option value="8">Event 8</option>
               <option value="9">Event 9</option>
               <option value="10">Event 10</option>
+              <option value="11">TOC</option>
             </select>
           </div>
           <div class="form-group">
@@ -102,21 +119,6 @@
 
       </div>
 
-      <!-- CSV Import -->
-      <div class="admin-card">
-        <h2>IMPORT FROM BLINDVALET CSV</h2>
-        <p style="font-size:0.9rem;color:#666;margin-bottom:1rem">
-          In BlindValet, open your tournament → Players tab → click <strong>Save to CSV</strong>.
-          Paste the file contents below. The app will auto-fill finish positions.
-        </p>
-        <div class="form-group csv-area">
-          <label>Paste CSV Contents</label>
-          <textarea id="csv-input" placeholder="Place,Name,Stack,KOs&#10;1,Greg C,240,1&#10;2,Chip G,150,0&#10;..."></textarea>
-          <p class="csv-hint">Expected columns: Place, Name (other columns ignored)</p>
-        </div>
-        <button class="btn btn-dark" onclick="parseCSV()">Parse CSV &rarr; Fill Results</button>
-      </div>
-
       <!-- Finish Order Entry -->
       <div class="admin-card" id="finish-entry-card" style="display:none">
         <h2>FINISH ORDER &amp; POINT PREVIEW</h2>
@@ -149,6 +151,9 @@
           <button class="btn btn-outline" onclick="clearFinishForm()">Clear</button>
         </div>
       </div>
+
+      <!-- Shown after a save: the event's results and the updated season standings -->
+      <div class="admin-card" id="save-summary" style="display:none"></div>
 
     </div><!-- end tab-event -->
 
@@ -291,22 +296,63 @@ function showStatus(msg, type = 'success') {
 }
 
 // ─── Init ───
-let allPlayers = [];
+let allPlayers = [];   // every player, active or not (inactive ones can still be matched from a CSV)
+let seasonSchedule = []; // this season's schedule rows, for dates and game types
+
+async function loadPlayers() {
+  const { data } = await getDB().from('players').select('*').order('name');
+  allPlayers = data || [];
+}
 
 async function init() {
   const db = getDB();
-  const { data } = await db.from('players').select('*').eq('active', true).order('name');
-  allPlayers = data || [];
+  await loadPlayers();
+  const { data: sched } = await db.from('schedule').select('*').eq('season', SEASON);
+  seasonSchedule = sched || [];
   // Pre-set today's date
   document.getElementById('ev-date').value = new Date().toISOString().slice(0,10);
+  setupCSVDrop();
 }
+
+// The TOC is saved as event number 11 with game type TOC. It shows its
+// results and payouts but never counts toward season points.
+const TOC_EVENT_NUMBER = 11;
+const isTOCSelected = () => parseInt(document.getElementById('ev-number').value) === TOC_EVENT_NUMBER;
 
 function updateEventName() {
   const n = document.getElementById('ev-number').value;
-  const game = document.getElementById('ev-game').value;
-  if (n) {
-    document.getElementById('ev-name').value = `S19E${n} ${game}`;
+  if (n && parseInt(n) === TOC_EVENT_NUMBER) {
+    const sched = seasonSchedule.find(s => s.is_toc);
+    if (sched) document.getElementById('ev-date').value = sched.event_date;
+    document.getElementById('ev-game').value = 'TOC';
+    document.getElementById('ev-name').value = `S${SEASON} TOC`;
+    rebuildIfShown();
+  } else if (n) {
+    // Picking an event fills its scheduled date and game type
+    const sched = seasonSchedule.find(s => !s.is_toc && s.event_number === parseInt(n));
+    if (sched) {
+      document.getElementById('ev-date').value = sched.event_date;
+      document.getElementById('ev-game').value = sched.game_type || 'NLHE';
+    } else if (document.getElementById('ev-game').value === 'TOC') {
+      document.getElementById('ev-game').value = 'NLHE';
+    }
+    rebuildIfShown();
+    const game = document.getElementById('ev-game').value;
+    document.getElementById('ev-name').value = `S${SEASON}E${n} ${game}`;
   }
+}
+
+// Switching between a regular event and the TOC changes the points column,
+// so redraw the table keeping whoever is already picked and the payouts typed in.
+function rebuildIfShown() {
+  if (document.getElementById('finish-entry-card').style.display === 'none') return;
+  const n = parseInt(document.getElementById('ev-players').value);
+  if (!n) return;
+  const prefilled = [...document.querySelectorAll('.player-select')]
+    .map(sel => ({ position: parseInt(sel.dataset.pos), playerId: sel.value })).filter(p => p.playerId);
+  const payouts = {};
+  document.querySelectorAll('.payout-input').forEach(inp => { payouts[parseInt(inp.dataset.pos)] = parseFloat(inp.value) || 0; });
+  buildFinishTable(n, prefilled, payouts);
 }
 
 // ─── Player count change → rebuild table ───
@@ -321,9 +367,16 @@ function updatePlayerCount() {
 }
 
 // ─── Build finish order table ───
-function buildFinishTable(totalPlayers, prefilled) {
-  // prefilled = [{position, name}]
+function buildFinishTable(totalPlayers, prefilled, csvPayouts) {
+  // prefilled = [{position, playerId}]
+  // csvPayouts = { [position]: amount } from the BlindValet file, or null to use the rules table
   const preview = previewAllPoints(totalPlayers);
+  if (csvPayouts) preview.forEach(row => { row.payout = csvPayouts[row.position] || 0; });
+  if (isTOCSelected()) {
+    // TOC: no league points; "in the money" is whoever gets paid
+    preview.forEach(row => { row.points = 0; row.inMoney = row.payout > 0; });
+  }
+  const chosenIds = new Set(prefilled.map(p => p.playerId).filter(Boolean));
 
   const tbody = document.getElementById('finish-body');
   tbody.innerHTML = '';
@@ -333,8 +386,8 @@ function buildFinishTable(totalPlayers, prefilled) {
 
     // Build player dropdown
     let options = '<option value="">-- Select Player --</option>';
-    allPlayers.forEach(p => {
-      const sel = pre && pre.name === p.name ? 'selected' : '';
+    allPlayers.filter(p => p.active || chosenIds.has(p.id)).forEach(p => {
+      const sel = pre && pre.playerId === p.id ? 'selected' : '';
       options += `<option value="${p.id}" data-name="${p.name}" ${sel}>${p.name}</option>`;
     });
 
@@ -380,6 +433,11 @@ function updatePotTotal() {
 
   const el = document.getElementById('pot-total');
   if (!el) return;
+  if (isTOCSelected()) {
+    // The TOC pot includes the season kitty, so there's no simple pot to check against
+    el.innerHTML = `TOC &middot; Paying out: <strong>$${paid.toLocaleString('en-US')}</strong> &middot; no league points awarded`;
+    return;
+  }
 
   const diff = paid - pot;
   const money = n => '$' + n.toLocaleString('en-US');
@@ -402,45 +460,173 @@ function resetPayouts() {
   updatePotTotal();
 }
 
-// ─── CSV Parser ───
-function parseCSV() {
-  const raw = document.getElementById('csv-input').value.trim();
-  if (!raw) { showStatus('Paste CSV content first.', 'error'); return; }
+// ─── BlindValet CSV upload ───
+// File name looks like SLPLS19E10_17102026.csv → season 19, event 10.
+// (The date in the name is when the file was saved, which can be after
+// midnight, so the event date comes from the schedule instead.)
+// Columns: PLACE, PLAYER, FIRST NAME, LAST NAME, PAYOUT, TOTAL, ELIMINATED AT
+let csvUnmatched = []; // [{position, name}] names not found on the roster
 
-  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-  // Find header row
-  const headerIdx = lines.findIndex(l => l.toLowerCase().includes('place') || l.toLowerCase().includes('name'));
-  const dataLines = headerIdx >= 0 ? lines.slice(headerIdx + 1) : lines;
-
-  const prefilled = [];
-  let maxPos = 0;
-
-  dataLines.forEach(line => {
-    const cols = line.split(',').map(c => c.trim().replace(/"/g, ''));
-    if (cols.length < 2) return;
-    const pos = parseInt(cols[0]);
-    const name = cols[1];
-    if (!isNaN(pos) && name) {
-      prefilled.push({ position: pos, name });
-      maxPos = Math.max(maxPos, pos);
-    }
+function setupCSVDrop() {
+  const drop = document.getElementById('csv-drop');
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); drop.classList.add('dragover');
+  }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); drop.classList.remove('dragover');
+  }));
+  drop.addEventListener('drop', e => {
+    const file = e.dataTransfer.files[0];
+    if (file) handleCSVFile(file);
   });
+}
 
-  if (prefilled.length === 0) {
-    showStatus('Could not parse CSV. Expected columns: Place, Name', 'error');
+// Split CSV text into rows of cells, honoring "quoted, values"
+function splitCSV(text) {
+  const rows = [];
+  let row = [], cell = '', quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+      else if (c === '"') quoted = false;
+      else cell += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ',') { row.push(cell.trim()); cell = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(cell.trim()); rows.push(row); row = []; cell = '';
+    } else cell += c;
+  }
+  row.push(cell.trim()); rows.push(row);
+  return rows.filter(r => r.some(c => c !== ''));
+}
+
+const normName = n => (n || '').toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ').trim();
+const findPlayer = name => allPlayers.find(p => normName(p.name) === normName(name));
+
+async function handleCSVFile(file) {
+  if (!file) return;
+  document.getElementById('csv-file-name').textContent = file.name;
+  document.getElementById('save-summary').style.display = 'none';
+  const text = await file.text();
+
+  // Event number (and season check) from the file name
+  let m = file.name.match(/S(\d+)E(\d+)/i);
+  // A TOC file: "...S19TOC..." or just "TOC" somewhere in the name
+  if (!m && /TOC/i.test(file.name)) {
+    const sm = file.name.match(/S(\d+)/i);
+    m = [null, sm ? sm[1] : String(SEASON), String(TOC_EVENT_NUMBER)];
+  }
+  if (!m) {
+    showStatus(`Couldn't find the event number in "${file.name}" (expected something like SLPLS19E10_…). Pick it below.`, 'error');
+  } else if (parseInt(m[1]) !== SEASON) {
+    showStatus(`This file is for Season ${m[1]}, but the admin is set to Season ${SEASON}. Nothing was filled in.`, 'error');
     return;
   }
 
-  // Set player count if not set
-  const playerInput = document.getElementById('ev-players');
-  if (!playerInput.value || parseInt(playerInput.value) < maxPos) {
-    playerInput.value = maxPos;
+  const rows = splitCSV(text);
+  const header = rows[0].map(h => h.toUpperCase());
+  const col = names => header.findIndex(h => names.includes(h));
+  const iPlace = col(['PLACE', 'POS', 'POSITION']);
+  const iPlayer = col(['PLAYER', 'NAME']);
+  const iFirst = col(['FIRST NAME']);
+  const iLast = col(['LAST NAME']);
+  const iPayout = col(['PAYOUT']);
+  if (iPlace < 0 || (iPlayer < 0 && iFirst < 0)) {
+    showStatus('This doesn\'t look like a BlindValet results CSV (no PLACE / PLAYER columns).', 'error');
+    return;
   }
 
-  const total = parseInt(playerInput.value) || maxPos;
+  const entries = [];
+  const csvPayouts = iPayout >= 0 ? {} : null;
+  rows.slice(1).forEach(r => {
+    const pos = parseInt(r[iPlace]);
+    let name = iPlayer >= 0 ? r[iPlayer] : '';
+    if (!name && iFirst >= 0) name = `${r[iFirst] || ''} ${r[iLast] || ''}`.trim();
+    if (isNaN(pos) || !name) return;
+    entries.push({ position: pos, name });
+    if (csvPayouts) csvPayouts[pos] = parseFloat((r[iPayout] || '').replace(/[$,]/g, '')) || 0;
+  });
+  if (entries.length < 2) {
+    showStatus('Found fewer than 2 players in the CSV.', 'error');
+    return;
+  }
+
+  // Event details
+  if (m) {
+    document.getElementById('ev-number').value = parseInt(m[2]);
+    updateEventName(); // fills scheduled date, game type, and name
+  }
+  const totalPlayers = Math.max(...entries.map(e => e.position));
+  document.getElementById('ev-players').value = totalPlayers;
+
+  // Match names to the roster
+  const prefilled = [];
+  csvUnmatched = [];
+  entries.forEach(e => {
+    const p = findPlayer(e.name);
+    if (p) prefilled.push({ position: e.position, playerId: p.id });
+    else csvUnmatched.push(e);
+  });
+
   document.getElementById('finish-entry-card').style.display = 'block';
-  buildFinishTable(total, prefilled);
-  showStatus(`Parsed ${prefilled.length} players from CSV. Review and save below.`, 'info');
+  buildFinishTable(totalPlayers, prefilled, csvPayouts);
+  renderNameFix();
+
+  const pot = totalPlayers * BUY_IN;
+  const paid = csvPayouts ? Object.values(csvPayouts).reduce((a, b) => a + b, 0) : pot;
+  const isTOC = isTOCSelected();
+  let msg = `Loaded ${entries.length} players for ${isTOC ? 'the TOC' : 'Event ' + (m ? m[2] : '?')}.`;
+  if (csvUnmatched.length) msg += ` ${csvUnmatched.length} name(s) need matching.`;
+  if (paid !== pot && !isTOC) msg += ` Heads up: CSV payouts total $${paid} but the pot is $${pot}.`;
+  showStatus(msg + ' Review and save below.', csvUnmatched.length || (paid !== pot && !isTOC) ? 'error' : 'info');
+}
+
+// Names from the CSV that aren't on the roster: match each to a player or add it
+function renderNameFix() {
+  const box = document.getElementById('name-fix');
+  if (!csvUnmatched.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  let html = `<div class="name-fix-box"><h3>NAMES NOT ON THE ROSTER</h3>
+    <p style="font-size:0.85rem;color:#666;margin-bottom:0.5rem">Match each to an existing player, or add them as a new player.</p>`;
+  csvUnmatched.forEach((u, i) => {
+    let opts = `<option value="">-- Choose --</option><option value="__new__">+ Add "${esc(u.name)}" as new player</option>`;
+    allPlayers.forEach(p => { opts += `<option value="${p.id}">${esc(p.name)}${p.active ? '' : ' (inactive)'}</option>`; });
+    html += `<div class="name-fix-row"><span>#${u.position}</span><strong>${esc(u.name)}</strong>
+      <select onchange="resolveName(${i}, this.value)">${opts}</select></div>`;
+  });
+  box.innerHTML = html + '</div>';
+  box.style.display = 'block';
+}
+
+async function resolveName(i, value) {
+  if (!value) return;
+  const u = csvUnmatched[i];
+  let playerId = value;
+  try {
+    if (value === '__new__') {
+      await adminCall('addPlayer', { name: u.name });
+      await loadPlayers();
+      playerId = findPlayer(u.name)?.id;
+      if (!playerId) throw new Error('player was added but could not be found');
+      showStatus(`Added ${u.name} to the roster.`, 'success');
+    }
+  } catch (err) {
+    showStatus(`Couldn't add ${u.name}: ${err.message}`, 'error');
+    return;
+  }
+  // Put the player into that finish position's dropdown
+  const sel = document.querySelector(`.player-select[data-pos="${u.position}"]`);
+  const p = allPlayers.find(x => x.id === playerId);
+  if (sel && p) {
+    if (![...sel.options].some(o => o.value === p.id)) {
+      sel.add(new Option(p.name, p.id));
+    }
+    sel.value = p.id;
+  }
+  csvUnmatched.splice(i, 1);
+  renderNameFix();
 }
 
 // ─── Save Event ───
@@ -455,6 +641,11 @@ async function saveEvent() {
 
   if (!eventNum || !eventName || !eventDate || !totalPlayers) {
     showStatus('Please fill in all event details (number, name, date, players).', 'error');
+    return;
+  }
+
+  if (csvUnmatched.length) {
+    showStatus('Match or add the names that aren\'t on the roster before saving.', 'error');
     return;
   }
 
@@ -493,12 +684,13 @@ async function saveEvent() {
     });
 
     const resultRows = entries.map(e => {
+      const isTOC = isTOCSelected();
       const calc = calcPoints(e.position, totalPlayers);
-      const tocBonus = e.position === 1 ? 2000 : 0;
+      const tocBonus = e.position === 1 && !isTOC ? 2000 : 0;
       return {
         player_id: e.playerId,
         finish_position: e.position,
-        points: calc.points,
+        points: isTOC ? 0 : calc.points,
         is_winner: e.position === 1,
         toc_bonus_chips: tocBonus,
         payout: editedPayouts[e.position] || 0
@@ -520,6 +712,7 @@ async function saveEvent() {
 
     showStatus(`Event "${eventName}" saved successfully with ${entries.length} players!`, 'success');
     clearFinishForm();
+    await showSaveSummary(parseInt(eventNum));
   } catch (err) {
     console.error(err);
     showStatus(`Error saving: ${err.message}`, 'error');
@@ -529,12 +722,91 @@ async function saveEvent() {
   }
 }
 
+// ─── After saving: event results + updated season standings ───
+async function showSaveSummary(eventNumber) {
+  const db = getDB();
+  const card = document.getElementById('save-summary');
+  const [{ data: ev }, { data: all }] = await Promise.all([
+    db.from('events')
+      .select('event_name, event_date, player_count, results(finish_position, points, payout, players(name))')
+      .eq('season', SEASON).eq('event_number', eventNumber).single(),
+    db.from('results')
+      .select('points, is_winner, players(name), events!inner(season, event_number, game_type)')
+      .eq('events.season', SEASON),
+  ]);
+  if (!ev) { card.style.display = 'none'; return; }
+
+  // Season totals, same math as the rankings page
+  const map = {};
+  (all || []).forEach(r => {
+    const name = r.players?.name;
+    if (!name || r.events.game_type === 'TOC') return; // TOC never counts toward season points
+    const p = map[name] || (map[name] = { name, events: 0, wins: 0, points: 0, before: 0 });
+    p.events++;
+    p.points += r.points;
+    if (r.is_winner) p.wins++;
+    if (r.events.event_number !== eventNumber) p.before += r.points;
+  });
+  const rankBy = key => {
+    const list = Object.values(map).sort((a, b) => b[key] - a[key] || b.wins - a.wins);
+    const ranks = {};
+    list.forEach((p, i) => {
+      ranks[p.name] = i > 0 && list[i - 1][key] === p[key] ? ranks[list[i - 1].name] : i + 1;
+    });
+    return { list, ranks };
+  };
+  const now = rankBy('points');
+  const prev = rankBy('before').ranks;
+  const savedTOC = eventNumber === TOC_EVENT_NUMBER;
+  const playedThis = savedTOC ? new Set() : new Set(ev.results.map(r => r.players?.name));
+
+  const money = n => n > 0 ? '$' + Number(n).toLocaleString('en-US') : '';
+  const d = new Date(ev.event_date + 'T12:00:00')
+    .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  let html = `<h2>SAVED: ${ev.event_name}</h2>
+    <p style="font-size:0.85rem;color:#888;margin-bottom:1rem">${d} &middot; ${ev.player_count} players</p>
+    <div style="overflow-x:auto"><table class="finish-entry-table">
+    <thead><tr><th>Place</th><th>Player</th><th>Points</th><th>Payout</th></tr></thead><tbody>`;
+  ev.results.sort((a, b) => a.finish_position - b.finish_position).forEach(r => {
+    html += `<tr><td>${r.finish_position}</td><td>${r.players?.name || ''}</td>
+      <td>${r.points}</td><td>${money(r.payout)}</td></tr>`;
+  });
+  html += `</tbody></table></div>
+    <h2 style="margin-top:1.8rem">SEASON ${SEASON} ${savedTOC ? 'FINAL ' : ''}STANDINGS</h2>
+    ${savedTOC ? '<p style="font-size:0.85rem;color:#888;margin-bottom:0.8rem">The TOC doesn\'t change season points.</p>' : ''}
+    <div style="overflow-x:auto"><table class="finish-entry-table">
+    <thead><tr><th>#</th><th>Player</th><th>Evts</th><th>W</th><th>Points</th><th>Move</th><th>TOC Chips</th></tr></thead><tbody>`;
+  now.list.forEach(p => {
+    const r = now.ranks[p.name];
+    let move = '';
+    if (playedThis.has(p.name)) {
+      const gained = p.points - p.before;
+      const was = p.before > 0 ? prev[p.name] : null;
+      const arrow = was == null ? 'new' : was > r ? `&#9650;${was - r}` : was < r ? `&#9660;${r - was}` : '&ndash;';
+      const color = was == null || was > r ? '#2a8a4a' : was < r ? '#c0392b' : '#999';
+      move = `<span style="color:${color}">${arrow}</span> <small style="color:#999">+${gained}</small>`;
+    }
+    html += `<tr><td>${r}</td><td>${p.name}</td><td>${p.events}</td><td>${p.wins}</td>
+      <td><strong>${p.points}</strong></td><td>${move}</td>
+      <td>${calcTOCChips(p.points, p.wins).toLocaleString('en-US')}</td></tr>`;
+  });
+  html += `</tbody></table></div>
+    <p style="margin-top:1rem"><a href="../rankings.html" target="_blank">Open the public rankings page &#8599;</a></p>`;
+  card.innerHTML = html;
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function clearFinishForm() {
   document.getElementById('ev-number').value = '';
   document.getElementById('ev-name').value = '';
   document.getElementById('ev-players').value = '';
   document.getElementById('ev-game').value = 'NLHE';
-  document.getElementById('csv-input').value = '';
+  document.getElementById('csv-file').value = '';
+  document.getElementById('csv-file-name').textContent = '';
+  csvUnmatched = [];
+  renderNameFix();
   document.getElementById('finish-entry-card').style.display = 'none';
   document.getElementById('ev-date').value = new Date().toISOString().slice(0,10);
 }
