@@ -15,11 +15,13 @@ const PREVIEW_SEASON = parseInt(new URLSearchParams(location.search).get('previe
 const SITE_SEASON = PREVIEW_SEASON || LIVE_SEASON;
 const FIRST_ARCHIVED_SEASON = 19;
 
+// tocTab: show the TOC tab in the menu. Turn it on for Season 20 when
+// that season's TOC sign-ups open.
 const SEASON_INFO = {
-  19: { roman: 'XIX', year: 2026, header: 'header.jpeg' },
-  20: { roman: 'XX',  year: 2027, header: 'header-s20.jpg' },
+  19: { roman: 'XIX', year: 2026, header: 'header.jpeg',    tocTab: true },
+  20: { roman: 'XX',  year: 2027, header: 'header-s20.jpg', tocTab: false },
 };
-const SEASON_META = SEASON_INFO[SITE_SEASON] || { roman: String(SITE_SEASON), year: 2007 + SITE_SEASON, header: 'header.jpeg' };
+const SEASON_META = SEASON_INFO[SITE_SEASON] || { roman: String(SITE_SEASON), year: 2007 + SITE_SEASON, header: 'header.jpeg', tocTab: false };
 
 // Fill in season text and the header image:
 //   data-season-roman → XX   data-season-num → 20
@@ -38,6 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // "Past Seasons" shows up in the menu once there's a finished season
   // before the one on screen (Season 19 is the first one in the database).
   const nav = document.querySelector('.site-nav');
+  if (nav && !SEASON_META.tocTab) {
+    nav.querySelectorAll('a[href^="toc.html"]').forEach(a => a.remove());
+  }
   if (nav && SITE_SEASON > FIRST_ARCHIVED_SEASON && !nav.querySelector('[href^="past-seasons.html"]')) {
     const link = document.createElement('a');
     link.href = 'past-seasons.html';
