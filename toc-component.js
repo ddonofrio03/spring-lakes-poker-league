@@ -21,6 +21,9 @@ const TOC = {
   PINNED: { name: 'Dave D', seat: 5 },
   // Also always at Main Tan Table (any open seat)
   TAN_PLAYERS: ['Zack C', 'John W'],
+  // Manual swaps applied after balancing: [goes to Tan, goes to the other table].
+  // Rocky may no-show, so he takes Tan's 7th seat and Eddie moves over.
+  SWAPS: [['Rocky P', 'Eddie B']],
 
   esc(s) {
     return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -152,6 +155,13 @@ const TOC = {
 
     const a = [], b = [];
     sorted.forEach((p, i) => (bestMask & (1 << i) ? a : b).push(p));
+
+    // Only swap when both players signed up and landed on opposite tables
+    this.SWAPS.forEach(([toTan, toOther]) => {
+      const i = b.findIndex(p => p.name === toTan);
+      const j = a.findIndex(p => p.name === toOther);
+      if (i >= 0 && j >= 0) [b[i], a[j]] = [a[j], b[i]];
+    });
     return [a, b];
   },
 
