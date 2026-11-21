@@ -19,6 +19,8 @@ const TOC = {
   TABLE_NAMES: ['Main Tan Table', 'New Cool Table', 'Table 3'],
   // Dave's regular seat: always Main Tan Table, seat 5
   PINNED: { name: 'Dave D', seat: 5 },
+  // Also always at Main Tan Table (any open seat)
+  TAN_PLAYERS: ['Zack C', 'John W'],
 
   esc(s) {
     return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -128,16 +130,17 @@ const TOC = {
 
   // Exact search: try every way to pick the Main Tan Table's players.
   // Tan always gets the extra player on an odd count, and the pinned
-  // player (Dave) always sits at Tan.
+  // player (Dave) and TAN_PLAYERS always sit at Tan.
   bestTwoWaySplit(sorted) {
     const n = sorted.length;
     const sizeA = Math.ceil(n / 2);
     const grand = sorted.reduce((s, p) => s + p.chips, 0);
-    const pinnedIdx = sorted.findIndex(p => p.name === this.PINNED.name);
+    const tanNames = [this.PINNED.name, ...this.TAN_PLAYERS];
+    const requiredMask = sorted.reduce((m, p, i) => tanNames.includes(p.name) ? m | (1 << i) : m, 0);
     let bestMask = 0, bestDiff = Infinity;
 
     for (let mask = 0; mask < (1 << n); mask++) {
-      if (pinnedIdx >= 0 && !(mask & (1 << pinnedIdx))) continue;
+      if ((mask & requiredMask) !== requiredMask) continue;
       let count = 0, sumA = 0;
       for (let i = 0; i < n; i++) {
         if (mask & (1 << i)) { count++; sumA += sorted[i].chips; }
